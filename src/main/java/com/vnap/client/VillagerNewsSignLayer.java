@@ -5,6 +5,8 @@ import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import com.vnap.VillagerNewsAddonPort;
 import com.vnap.entity.VillagerNewsData;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
 import net.minecraft.client.model.VillagerModel;
 import net.minecraft.client.model.geom.ModelPart;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -53,7 +55,9 @@ public final class VillagerNewsSignLayer extends RenderLayer<Villager, VillagerM
 		poseStack.mulPose(Axis.XP.rotationDegrees(42.97F));
 		PoseStack.Pose pose = poseStack.last();
 		drawBoard(pose, buffers.getBuffer(RenderType.entityCutout(BOARD_TEXTURES[type])), packedLight);
-		drawText(pose, buffers.getBuffer(RenderType.entityCutout(TEXT_TEXTURE)), packedLight, message);
+		if (!drawTranslatedText(poseStack, buffers, packedLight, message)) {
+			drawText(pose, buffers.getBuffer(RenderType.entityCutout(TEXT_TEXTURE)), packedLight, message);
+		}
 		poseStack.popPose();
 	}
 
@@ -87,6 +91,29 @@ public final class VillagerNewsSignLayer extends RenderLayer<Villager, VillagerM
 			0.0F, 14.0F / 32.0F, 2.0F / 64.0F, 2.0F / 32.0F, -1.0F, 0.0F, 0.0F);
 		quad(pose, vertices, light, right, bottom, front, right, bottom, back, right, top, back, right, top, front,
 			26.0F / 64.0F, 14.0F / 32.0F, 28.0F / 64.0F, 2.0F / 32.0F, 1.0F, 0.0F, 0.0F);
+	}
+
+	// the text follows the subtitle language and the old atlas is only a fallback
+	private static boolean drawTranslatedText(PoseStack poseStack, MultiBufferSource buffers, int light, int message) {
+		String text = SubtitleLanguages.sign(message);
+		if (text == null || text.isBlank()) return false;
+		Font font = Minecraft.getInstance().font;
+		String[] lines = text.split("\n");
+		int width = 1;
+		for (String line : lines) width = Math.max(width, font.width(line));
+		int height = lines.length * font.lineHeight - 1;
+		float scale = Math.min(1.0F / 96.0F, Math.min(0.94F / width, 0.36F / height));
+		poseStack.pushPose();
+		poseStack.translate(0.0F, 0.0F, -0.0605F);
+		poseStack.scale(scale, scale, scale);
+		float y = -height / 2.0F;
+		for (String line : lines) {
+			font.drawInBatch(line, -font.width(line) / 2.0F, y, 0xFF000000, false, poseStack.last().pose(), buffers,
+				Font.DisplayMode.POLYGON_OFFSET, 0, light);
+			y += font.lineHeight;
+		}
+		poseStack.popPose();
+		return true;
 	}
 
 	private static void drawText(PoseStack.Pose pose, VertexConsumer vertices, int light, int message) {

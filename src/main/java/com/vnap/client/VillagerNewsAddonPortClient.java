@@ -61,7 +61,10 @@ public final class VillagerNewsAddonPortClient implements ClientModInitializer {
 			context.client().execute(() -> SupplementalSoundState.play(payload))
 		);
 		ClientPlayNetworking.registerGlobalReceiver(VillagerNewsSettingsPayload.TYPE, (payload, context) ->
-			context.client().execute(() -> VillagerNewsSettingsState.apply(payload))
+			context.client().execute(() -> {
+				VillagerNewsSettingsState.apply(payload);
+				if (context.client().screen instanceof HandbookScreen handbook) handbook.settingsChanged();
+			})
 		);
 		ClientPlayConnectionEvents.DISCONNECT.register((handler, client) -> {
 			DialogueSoundState.clear(client);

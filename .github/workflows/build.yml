@@ -30,9 +30,13 @@ jobs:
         with:
           name: villager-news-addon-java-backport
           path: build/libs/
+      - name: release notes
+        if: startsWith(github.ref, 'refs/tags/v')
+        # only the newest changelog section goes into the release
+        run: awk '/^## /{n++} n==1' CHANGELOG.md > release_notes.md
       - name: publish release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           files: build/libs/*.jar
-          body_path: CHANGELOG.md
+          body_path: release_notes.md

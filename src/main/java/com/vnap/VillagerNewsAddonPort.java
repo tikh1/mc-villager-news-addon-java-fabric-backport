@@ -10,6 +10,7 @@ import com.vnap.network.DialogueAnimationPayload;
 import com.vnap.network.HurtEffectPayload;
 import com.vnap.network.VillagerNewsSettingsNetwork;
 import com.vnap.network.VillagerNewsSettingsPayload;
+import com.vnap.network.VillagerNewsSettingsRequestPayload;
 import com.vnap.sound.SupplementalSoundCatalog;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
@@ -31,6 +32,7 @@ public class VillagerNewsAddonPort implements ModInitializer {
 		PayloadTypeRegistry.playS2C().register(HurtEffectPayload.TYPE, HurtEffectPayload.CODEC);
 		PayloadTypeRegistry.playS2C().register(VillagerNewsSettingsPayload.TYPE, VillagerNewsSettingsPayload.CODEC);
 		PayloadTypeRegistry.playC2S().register(VillagerNewsSettingsPayload.TYPE, VillagerNewsSettingsPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(VillagerNewsSettingsRequestPayload.TYPE, VillagerNewsSettingsRequestPayload.CODEC);
 		VillagerNewsSettings.load();
 		VillagerNewsSettingsNetwork.register();
 		SupplementalSoundCatalog.register();

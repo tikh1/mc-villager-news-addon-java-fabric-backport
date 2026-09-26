@@ -7,6 +7,7 @@ import com.vnap.client.VillagerNewsClientSettings;
 import com.vnap.client.VillagerNewsModMenu;
 import com.vnap.dialogue.ContextualDialogueController;
 import com.vnap.dialogue.DialogueCatalog;
+import com.vnap.entity.VillagerNewsData;
 import net.minecraft.client.gui.components.Button;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -44,7 +45,7 @@ public final class VisualSnapshot implements ClientModInitializer {
 
 	private static final String[] CHARACTERS = {
 		"villager", "Mayor", "Testificate Man", "Villager #5", "Villager #9", "Villager Unreachable",
-		"wandering_trader", "baby", "jeb_", "baby jeb_", "Wooly"
+		"wandering_trader", "baby", "jeb_", "baby jeb_", "Wooly", "sign"
 	};
 	private static final int PER_CHARACTER = 100;
 
@@ -140,6 +141,12 @@ public final class VisualSnapshot implements ClientModInitializer {
 			case "baby" -> spawnVillager(level, pos, null, true);
 			case "baby jeb_" -> spawnVillager(level, pos, "jeb_", true);
 			case "wandering_trader" -> place(level, EntityType.WANDERING_TRADER.create(level), pos);
+			case "sign" -> {
+				spawnVillager(level, origin.offset(0, 0, 2), null, false);
+				VillagerNewsData sign = (VillagerNewsData) SPAWNED.getLast();
+				sign.vnap$setSignType(0);
+				sign.vnap$setSignMessage(4);
+			}
 			case "Wooly" -> {
 				Sheep wooly = EntityType.SHEEP.create(level);
 				wooly.setCustomName(Component.literal("Wooly"));

@@ -2,6 +2,7 @@ package com.vnap.client;
 
 import com.vnap.config.VillagerNewsSettings;
 import com.vnap.network.VillagerNewsSettingsPayload;
+import com.vnap.network.VillagerNewsSettingsRequestPayload;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.minecraft.client.Minecraft;
 
@@ -24,7 +25,14 @@ public final class VillagerNewsSettingsState {
 	}
 
 	public static void prepareConfigScreen() {
-		if (Minecraft.getInstance().getConnection() != null) return;
+		Minecraft client = Minecraft.getInstance();
+		// in singleplayer the server runs in this game so the settings are edited directly
+		if (client.getConnection() != null && !client.isLocalServer()) {
+			if (ClientPlayNetworking.canSend(VillagerNewsSettingsRequestPayload.TYPE)) {
+				ClientPlayNetworking.send(VillagerNewsSettingsRequestPayload.INSTANCE);
+			}
+			return;
+		}
 		chattiness = VillagerNewsSettings.chattiness();
 		rareVoicelines = VillagerNewsSettings.rareVoicelines();
 		spawnSpecialVillagers = VillagerNewsSettings.spawnSpecialVillagers();

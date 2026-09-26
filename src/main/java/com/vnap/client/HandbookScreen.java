@@ -353,7 +353,12 @@ public final class HandbookScreen extends Screen {
 			.bounds(left, height - 30, contentWidth, 20).build());
 	}
 
+	public void settingsChanged() {
+		if (page == Page.SETTINGS) rebuildWidgets();
+	}
+
 	private void navigate(Page destination) {
+		if (destination == Page.SETTINGS && page != Page.TRANSLATING) VillagerNewsSettingsState.prepareConfigScreen();
 		page = destination;
 		pageIndex = 0;
 		entryIndex = 0;

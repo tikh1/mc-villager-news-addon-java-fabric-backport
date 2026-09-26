@@ -49,7 +49,7 @@ public final class SubtitleLanguages {
 	private static Map<String, Builder> packLanguages = Map.of();
 	private static Map<String, Language> languages = Map.of();
 	private static Map<String, byte[]> builtIn = Map.of();
-	private static Language english = new Language("English", Map.of(), Map.of());
+	private static Language english = new Language("English", Map.of(), Map.of(), Map.of());
 
 	private SubtitleLanguages() {
 	}
@@ -213,6 +213,12 @@ public final class SubtitleLanguages {
 		return line == null ? id : line;
 	}
 
+	public static String sign(int index) {
+		Language selected = languages.get(resolve(VillagerNewsClientSettings.subtitleLanguage()));
+		String text = selected == null ? null : selected.signs().get(String.valueOf(index));
+		return text != null ? text : english.signs().get(String.valueOf(index));
+	}
+
 	// villagers without a name tag use the vanilla name so it is swapped for the subtitle language
 	public static Component speakerName(Entity entity) {
 		Component name = entity.getName();
@@ -255,13 +261,14 @@ public final class SubtitleLanguages {
 		return codes.get((Math.max(0, codes.indexOf(current)) + 1) % codes.size());
 	}
 
-	private record Language(String name, Map<String, String> lines, Map<String, String> names) {
+	private record Language(String name, Map<String, String> lines, Map<String, String> names, Map<String, String> signs) {
 	}
 
 	private static final class Builder {
 		private String name;
 		private final Map<String, String> lines = new HashMap<>();
 		private final Map<String, String> names = new HashMap<>();
+		private final Map<String, String> signs = new HashMap<>();
 
 		private Builder(String code) {
 			name = code;
@@ -279,27 +286,34 @@ public final class SubtitleLanguages {
 					names.put(line.getKey(), line.getValue().getAsString());
 				}
 			}
+			if (root.has("signs")) {
+				for (Map.Entry<String, JsonElement> line : root.getAsJsonObject("signs").entrySet()) {
+					signs.put(line.getKey(), line.getValue().getAsString());
+				}
+			}
 		}
 
 		private void addAll(Builder other) {
 			name = other.name;
 			lines.putAll(other.lines);
 			names.putAll(other.names);
+			signs.putAll(other.signs);
 		}
 
 		private boolean isEmpty() {
-			return lines.isEmpty() && names.isEmpty();
+			return lines.isEmpty() && names.isEmpty() && signs.isEmpty();
 		}
 
 		private Builder copy() {
 			Builder copy = new Builder(name);
 			copy.lines.putAll(lines);
 			copy.names.putAll(names);
+			copy.signs.putAll(signs);
 			return copy;
 		}
 
 		private Language build() {
-			return new Language(name, Map.copyOf(lines), Map.copyOf(names));
+			return new Language(name, Map.copyOf(lines), Map.copyOf(names), Map.copyOf(signs));
 		}
 	}
 }

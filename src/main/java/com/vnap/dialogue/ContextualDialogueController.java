@@ -209,6 +209,7 @@ public final class ContextualDialogueController {
 		Map.entry("zombified_piglin", "qltnkz"), Map.entry("zombie_villager", "nstwos")
 	);
 	private static long ticks;
+	private static boolean ambientSpoken;
 
 	private ContextualDialogueController() {
 	}
@@ -1122,6 +1123,7 @@ public final class ContextualDialogueController {
 	}
 
 	private static void processConversations(ServerLevel level) {
+		ambientSpoken = false;
 		Set<UUID> updatedVillagers = new HashSet<>();
 		for (ServerPlayer player : level.players()) {
 			for (Villager villager : nearbyVillagers(level, player.position(), 24)) {
@@ -1307,7 +1309,7 @@ public final class ContextualDialogueController {
 		boolean sleeping = villager.isSleeping();
 		boolean wasSleeping = LAST_SLEEPING.getOrDefault(villager.getUUID(), sleeping);
 		if (sleeping) {
-			if (wasSleeping) playTitle(villager, "Sleeping", "sleeping:" + villager.getUUID(), LONG_COOLDOWN);
+			if (wasSleeping && !ambientSpoken) markAmbient(playTitle(villager, "Sleeping", "sleeping:" + villager.getUUID(), LONG_COOLDOWN));
 			LAST_SLEEPING.put(villager.getUUID(), true);
 			VILLAGER_INVENTORIES.put(villager.getUUID(), inventoryCounts(villager));
 			VILLAGER_STATES.put(villager.getUUID(), current);
@@ -1350,42 +1352,42 @@ public final class ContextualDialogueController {
 				playId(villager, id, "name:" + villager.getUUID() + ":" + current.name, 1L);
 			}
 			if (!previous.working && current.working) {
-				playId(villager, "qawras", "work_start:" + villager.getUUID(), LONG_COOLDOWN, workstation == null ? null : Vec3.atCenterOf(workstation));
+				if (!ambientSpoken) markAmbient(playId(villager, "qawras", "work_start:" + villager.getUUID(), LONG_COOLDOWN, workstation == null ? null : Vec3.atCenterOf(workstation)));
 			} else if (current.working) {
 				String work = ticks / LONG_COOLDOWN % 3L == 0L ? "sdhkke" : professionWorkDialogue(current.profession);
-				if (work != null) playId(villager, work, "work:" + villager.getUUID() + ":" + work, LONG_COOLDOWN,
-					workstation == null ? null : Vec3.atCenterOf(workstation));
+				if (work != null && !ambientSpoken) markAmbient(playId(villager, work, "work:" + villager.getUUID() + ":" + work, LONG_COOLDOWN,
+					workstation == null ? null : Vec3.atCenterOf(workstation)));
 			}
 		}
 		processConditionDialogues(villager);
 		if (!current.profession.equals("none") && !current.profession.equals("nitwit") && workstation == null) {
 			long since = NO_WORKSTATION_SINCE.computeIfAbsent(villager.getUUID(), ignored -> ticks);
 			if (ticks - since >= 600L) {
-				playId(villager, "ywzhwz", "missing_workstation:" + villager.getUUID(), LONG_COOLDOWN);
+				if (!ambientSpoken) markAmbient(playId(villager, "ywzhwz", "missing_workstation:" + villager.getUUID(), LONG_COOLDOWN));
 				NO_WORKSTATION_SINCE.put(villager.getUUID(), ticks);
 			}
 		} else NO_WORKSTATION_SINCE.remove(villager.getUUID());
 		if (!villager.isBaby() && !villager.getBrain().hasMemoryValue(MemoryModuleType.MEETING_POINT)) {
 			long since = NO_BELL_SINCE.computeIfAbsent(villager.getUUID(), ignored -> ticks);
 			if (ticks - since >= 1200L) {
-				playId(villager, "trphsn", "missing_bell:" + villager.getUUID(), LONG_COOLDOWN);
+				if (!ambientSpoken) markAmbient(playId(villager, "trphsn", "missing_bell:" + villager.getUUID(), LONG_COOLDOWN));
 				NO_BELL_SINCE.put(villager.getUUID(), ticks);
 			}
 		} else NO_BELL_SINCE.remove(villager.getUUID());
 		if (profession(villager).equals("farmer") && nearCrops(villager.level(), villager.blockPosition(), 4)) {
-			playId(villager, "aobqjt", "farming:" + villager.getUUID(), LONG_COOLDOWN);
+			if (!ambientSpoken) markAmbient(playId(villager, "aobqjt", "farming:" + villager.getUUID(), LONG_COOLDOWN));
 		}
 		if (!villager.isSleeping() && villager.getDeltaMovement().horizontalDistanceSqr() > 0.0004
 				&& villager.level() instanceof ServerLevel level) {
 			if (!data(villager).vnap$hasNose()) {
-				playId(villager, "dcvgnm", "no_nose_wander:" + villager.getUUID(), LONG_COOLDOWN);
+				if (!ambientSpoken) markAmbient(playId(villager, "dcvgnm", "no_nose_wander:" + villager.getUUID(), LONG_COOLDOWN));
 			}
 			float sunAngle = sunAngle(level);
 			if (sunAngle >= 0.5F && sunAngle < 0.85F) {
 				String id = level.dimension() == Level.END ? "iubjul" : level.dimension() == Level.NETHER ? "bvtmmz"
 					: level.dimension() != Level.OVERWORLD ? "uhbigm"
 					: villager.getBrain().hasMemoryValue(MemoryModuleType.HOME) ? "wkfbuv" : "uqguqj";
-				playId(villager, id, "return_home:" + villager.getUUID() + ":" + id, LONG_COOLDOWN);
+				if (!ambientSpoken) markAmbient(playId(villager, id, "return_home:" + villager.getUUID() + ":" + id, LONG_COOLDOWN));
 			}
 		}
 		long danger = LAST_DANGER.getOrDefault(villager.getUUID(), Long.MIN_VALUE / 2);
@@ -1394,7 +1396,7 @@ public final class ContextualDialogueController {
 		}
 		if (villager.isBaby() && villager.getDeltaMovement().horizontalDistanceSqr() > 0.02) {
 			boolean weekend = LocalDate.now().getDayOfWeek() == DayOfWeek.SATURDAY || LocalDate.now().getDayOfWeek() == DayOfWeek.SUNDAY;
-			playId(villager, weekend ? "vbclem" : "vhwksn", "baby_sprint:" + villager.getUUID(), LONG_COOLDOWN);
+			if (!ambientSpoken) markAmbient(playId(villager, weekend ? "vbclem" : "vhwksn", "baby_sprint:" + villager.getUUID(), LONG_COOLDOWN));
 		}
 		VILLAGER_STATES.put(villager.getUUID(), current);
 	}
@@ -2232,6 +2234,11 @@ public final class ContextualDialogueController {
 		return group != null && play(speaker, group, cooldownKey, cooldown, target, null, true);
 	}
 
+	// only one background line starts per pass so a whole village never talks at once
+	private static void markAmbient(boolean played) {
+		if (played) ambientSpoken = true;
+	}
+
 	private static boolean playId(LivingEntity speaker, String id, String cooldownKey, long cooldown) {
 		DialogueCatalog.DialogueGroup group = DialogueCatalog.byId(id);
 		return group != null && play(speaker, group, cooldownKey, cooldown, null, null);
@@ -2278,7 +2285,9 @@ public final class ContextualDialogueController {
 		if (variant == null) return false;
 		DialogueAnimationNetwork.send(level, speaker, group.id(), variant.index(), (int) variant.durationTicks());
 		ACTIVE_SOUNDS.put(speaker.getUUID(), new ActiveSound(group.id(), ticks + variant.durationTicks()));
-		COOLDOWNS.put(cooldownKey, ticks);
+		// a little random extra wait keeps villagers from lining up on the same cooldown
+		long jitter = cooldown >= SHORT_COOLDOWN ? ThreadLocalRandom.current().nextLong(cooldown / 4 + 1) : 0L;
+		COOLDOWNS.put(cooldownKey, ticks + jitter);
 		int maximumWeight = group.variants().stream().mapToInt(DialogueCatalog.DialogueVariant::weight).max().orElse(1);
 		int eligibleVariants = VillagerNewsSettings.rareVoicelines() == 0
 			? (int) group.variants().stream().filter(candidate -> candidate.weight() >= maximumWeight * 0.8).count()

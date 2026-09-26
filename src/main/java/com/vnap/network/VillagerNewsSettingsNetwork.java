@@ -18,6 +18,8 @@ public final class VillagerNewsSettingsNetwork {
 			VillagerNewsSettings.update(payload.chattiness(), payload.rareVoicelines(), payload.spawnSpecialVillagers());
 			send(context.player());
 		});
+		ServerPlayNetworking.registerGlobalReceiver(VillagerNewsSettingsRequestPayload.TYPE,
+			(payload, context) -> send(context.player()));
 		ServerPlayConnectionEvents.JOIN.register((listener, sender, server) -> send(listener.getPlayer()));
 	}
 

@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.3.6.1+1.21.1
+
+A bug fix update. Replace the old jar in your `mods` folder with this one.
+
+### Fixed
+
+- Dialogue settings could stay locked in singleplayer, and operators could not
+  always change them on servers
+- A whole village, such as a trading hall, could start talking at once. Only
+  one villager starts a background line at a time now
+- The text on the signs villagers carry was always English. It now follows the
+  subtitle language in all six languages
+
+### Added
+
+- Language files can translate sign text in a new `"signs"` section
+
 ## 1.3.6+1.21.1
 
 The first Minecraft 1.21.1 backport of

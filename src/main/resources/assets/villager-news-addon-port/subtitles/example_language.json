@@ -5,6 +5,7 @@
     "set \"language\" to the name shown in the Villager News settings, and translate every line in \"subtitles\" without changing the keys.",
     "Each key is <dialogue>.<variant>.<part>. Parts with the same dialogue and variant are shown one after another, so keep each part in its own key.",
     "\"names\" is optional. It renames villagers without a name tag in front of their subtitles, for example Farmer or Wandering Trader.",
+    "\"signs\" is optional. It holds the text on signs that villagers carry, \\n starts a new line and long lines shrink to fit.",
     "Lines you leave out are shown in English. Choose Auto in the settings to follow the game language.",
     "Optional: ai_translation_prompt.md in this folder is a ready-made prompt for AI coding assistants that drafts a full translation."
   ],
@@ -12,6 +13,10 @@
   "names": {
     "entity.minecraft.villager.farmer": "Farmer",
     "entity.minecraft.wandering_trader": "Wandering Trader"
+  },
+  "signs": {
+    "4": "BREAKING NEWS!\nLocal Man Says:\nHmm",
+    "8": "Villager\nNews"
   },
   "subtitles": {
     "kxrhxt.0.0": "Aaghh!",

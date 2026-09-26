@@ -13,9 +13,11 @@ import net.minecraft.gametest.framework.GameTestHelper;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.MobSpawnType;
 import net.minecraft.world.entity.animal.Sheep;
@@ -31,9 +33,17 @@ import net.minecraft.world.item.trading.MerchantOffer;
 import net.minecraft.world.level.GameType;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.core.Direction;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.Scoreboard;
 
+import java.util.List;
+import java.lang.reflect.Field;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -52,6 +62,54 @@ public class VillagerNewsGameTests implements FabricGameTest {
 		helper.assertTrue(SpawnEggItem.byId(EntityType.SHEEP) == Items.SHEEP_SPAWN_EGG,
 			"Wooly's spawn egg replaced the vanilla sheep spawn egg lookup");
 		helper.succeed();
+	}
+
+	@GameTest(template = EMPTY_STRUCTURE)
+	public void characterSpawnEggsSpawnAdults(GameTestHelper helper) {
+		Player player = helper.makeMockPlayer(GameType.CREATIVE);
+		BlockPos floor = helper.absolutePos(new BlockPos(1, 1, 1));
+		for (Item egg : List.of(VillagerNewsItems.MAYOR_VILLAGER_SPAWN_EGG, VillagerNewsItems.TESTIFICATE_MAN_SPAWN_EGG,
+				VillagerNewsItems.VILLAGER_5_SPAWN_EGG, VillagerNewsItems.VILLAGER_9_SPAWN_EGG)) {
+			ItemStack stack = new ItemStack(egg);
+			player.setItemInHand(InteractionHand.MAIN_HAND, stack);
+			egg.useOn(new UseOnContext(player, InteractionHand.MAIN_HAND,
+				new BlockHitResult(Vec3.atCenterOf(floor), Direction.UP, floor, false)));
+		}
+		List<Villager> spawned = helper.getLevel().getEntitiesOfClass(Villager.class, new AABB(floor).inflate(3.0));
+		helper.assertTrue(spawned.size() == 4, "Expected 4 villagers from the character eggs but found " + spawned.size());
+		for (Villager villager : spawned) {
+			helper.assertFalse(villager.isBaby(), villager.getName().getString() + " spawned from its egg as a baby");
+		}
+		helper.succeed();
+	}
+
+	// six villagers without a bell used to complain in the same tick once their timers ran out
+	@GameTest(template = EMPTY_STRUCTURE, batch = "village_crowd", timeoutTicks = 1700)
+	public void villageDoesNotTalkAllAtOnce(GameTestHelper helper) throws ReflectiveOperationException {
+		ServerPlayer player = helper.makeMockServerPlayerInLevel();
+		player.moveTo(Vec3.atBottomCenterOf(helper.absolutePos(new BlockPos(1, 2, 1))));
+		List<UUID> villagers = new ArrayList<>();
+		for (int index = 0; index < 6; index++) {
+			Villager villager = helper.spawn(EntityType.VILLAGER, 3 + index % 3, 2, 3 + index / 3 * 2);
+			villager.setNoAi(true);
+			villagers.add(villager.getUUID());
+		}
+		Field activeField = ContextualDialogueController.class.getDeclaredField("ACTIVE_SOUNDS");
+		activeField.setAccessible(true);
+		Map<?, ?> active = (Map<?, ?>) activeField.get(null);
+		Field cooldownField = ContextualDialogueController.class.getDeclaredField("COOLDOWNS");
+		cooldownField.setAccessible(true);
+		Map<?, ?> cooldowns = (Map<?, ?>) cooldownField.get(null);
+		int[] loudest = {0};
+		helper.onEachTick(() -> loudest[0] = Math.max(loudest[0],
+			(int) villagers.stream().filter(active::containsKey).count()));
+		helper.runAtTickTime(1600, () -> {
+			long complaints = cooldowns.keySet().stream().filter(key -> key.toString().startsWith("missing_bell:")).count();
+			helper.getLevel().removePlayerImmediately(player, Entity.RemovalReason.DISCARDED);
+			helper.assertTrue(complaints >= 1, "No villager noticed the missing bell");
+			helper.assertTrue(loudest[0] <= 3, loudest[0] + " villagers talked at the same time");
+			helper.succeed();
+		});
 	}
 
 	@GameTest(template = EMPTY_STRUCTURE)

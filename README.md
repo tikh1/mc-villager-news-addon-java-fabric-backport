@@ -1,7 +1,7 @@
 # Villager News Addon Java Backport
 
 A Fabric backport of the **Villager News Addon Port** to **Minecraft Java Edition
-1.21.1**. Current release: **1.3.6+1.21.1**. See [`CHANGELOG.md`](CHANGELOG.md)
+1.21.1**. Current release: **1.3.6.1+1.21.1**. See [`CHANGELOG.md`](CHANGELOG.md)
 for what changed.
 
 This project is based on
@@ -28,8 +28,8 @@ for support, updates, and discussion about the port.
   language, then another region of the same language, then English
 - Subtitles, the handbook, the settings screen, and item names translated into
   Brazilian Portuguese, Russian, Simplified Chinese, Spanish, and Turkish
-- Speaker names in front of subtitles, such as Farmer or Wandering Trader, use
-  the subtitle language
+- Speaker names in front of subtitles, such as Farmer or Wandering Trader, and
+  the text on the signs villagers carry use the subtitle language
 - Anyone can add a new subtitle language by dropping a file into
   `config/villager-news-addon-port/subtitles`, like subtitle files for a movie.
   The settings screen explains how and opens the folder
@@ -83,7 +83,7 @@ Handbook.
 
 1. Install Fabric Loader for Minecraft 1.21.1.
 2. Put Fabric API, EMF, ETF, ESF, and
-   `villager-news-addon-java-backport-1.3.6+1.21.1.jar` in the `mods` folder.
+   `villager-news-addon-java-backport-1.3.6.1+1.21.1.jar` in the `mods` folder.
 3. Start Minecraft with the Fabric profile.
 
 For multiplayer, install the mod and its dependencies on the server and on
@@ -159,6 +159,8 @@ this folder:
    and stretched words such as `Aaagh` or `Nooo`.
 5. Translate the speaker names in `"names"`, such as Farmer or Wandering
    Trader. You can use the names from Minecraft's own language file.
+   `"signs"` holds the text on the signs villagers carry. `\n` starts a new
+   line, and long text shrinks to fit the sign.
 6. Open the settings again and pick your language, or leave it on **Auto** if
    it matches your game language. No restart is needed.
 

@@ -81,6 +81,9 @@ Keep each voice consistent through the whole file.
 - `"names"`: translate the speaker names. Use the exact official names from
   the game's `<CODE>` language file for the same keys (for example
   `entity.minecraft.villager.farmer`).
+- `"signs"`: translate the text on the signs villagers carry. They are short
+  jokes, so translate the joke, not the words. `\n` starts a new line. Keep
+  each line short, long text is shrunk to fit the sign. Keep arrows like `<--`.
 - `"subtitles"`: translate every value. **Never change a key.**
 - Each key is `<dialogue>.<variant>.<part>`. Parts with the same dialogue and
   variant are one voice line split over time. Keep **the same number of
@@ -145,7 +148,7 @@ When the file is complete, check it with a small script or by hand:
 
 - The file is valid JSON.
 - `subtitles` has exactly the same keys as `en_us.json`, and no value is empty.
-- `names` has the same keys as in `en_us.json`.
+- `names` and `signs` have the same keys as in `en_us.json`.
 - No line is still in English by mistake.
 - CAPITALS, stretched words, `*actions*`, and `...` from the English are still
   there in some form.
