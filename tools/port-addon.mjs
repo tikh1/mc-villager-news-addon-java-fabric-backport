@@ -1610,6 +1610,7 @@ const catalog = { groups: {}, titles: {} };
 const javaSounds = {};
 const javaLanguageFile = join(modAssets, "lang", "en_us.json");
 const javaLanguage = existsSync(javaLanguageFile) ? readJson(javaLanguageFile) : {};
+const subtitleLanguage = { language: "English", subtitles: {} };
 for (const key of Object.keys(javaLanguage)) {
   if (key === `subtitles.${modNamespace}.talking`
     || key.startsWith(`subtitles.${modNamespace}.dialogue.`)) delete javaLanguage[key];
@@ -1633,7 +1634,7 @@ for (const [id, group] of dialogueGroups) {
   for (const [index, sound] of group.sounds.entries()) {
     catalog.groups[id].variants[index].subtitles = sound.subtitles.map((subtitle, subtitleIndex) => {
       const key = `subtitles.${modNamespace}.dialogue.${id}.${index}.${subtitleIndex}`;
-      javaLanguage[key] = subtitle.text.replaceAll("%", "%%");
+      subtitleLanguage.subtitles[`${id}.${index}.${subtitleIndex}`] = subtitle.text;
       return { time: subtitle.time, key };
     });
     javaSounds[`dialogue.${id}.${index}`] = {
@@ -1653,6 +1654,7 @@ writeJson(join(modAssets, "dialogues.json"), catalog);
 writeJson(join(modAssets, "handbook.json"), handbook);
 writeJson(join(modAssets, "sounds.json"), javaSounds);
 writeJson(javaLanguageFile, javaLanguage);
+writeJson(join(modAssets, "subtitles", "en_us.json"), subtitleLanguage);
 
 const commonClientDescription = walkFiles(join(resourceRoot, "entity"))
   .filter((path) => path.endsWith(".json"))

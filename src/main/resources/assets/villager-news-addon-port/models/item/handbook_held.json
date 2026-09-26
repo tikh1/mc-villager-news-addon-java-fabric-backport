@@ -71,17 +71,7 @@
                                                            ],
                                                     "texture":  "#texture"
                                                 }
-                                   },
-                         "rotation":  {
-                                          "origin":  [
-                                                         8.5,
-                                                         8,
-                                                         8
-                                                     ],
-                                          "x":  90,
-                                          "y":  0,
-                                          "z":  0
-                                      }
+                                   }
                      },
                      {
                          "from":  [
@@ -149,17 +139,7 @@
                                                            ],
                                                     "texture":  "#texture"
                                                 }
-                                   },
-                         "rotation":  {
-                                          "origin":  [
-                                                         8.5,
-                                                         8,
-                                                         8
-                                                     ],
-                                          "x":  90,
-                                          "y":  0,
-                                          "z":  0
-                                      }
+                                   }
                      },
                      {
                          "from":  [
@@ -229,17 +209,7 @@
                                                     "texture":  "#texture",
                                                     "rotation":  90
                                                 }
-                                   },
-                         "rotation":  {
-                                          "origin":  [
-                                                         8.5,
-                                                         8,
-                                                         8
-                                                     ],
-                                          "x":  90,
-                                          "y":  0,
-                                          "z":  0
-                                      }
+                                   }
                      },
                      {
                          "from":  [
@@ -281,17 +251,7 @@
                                                            ],
                                                     "texture":  "#texture"
                                                 }
-                                   },
-                         "rotation":  {
-                                          "origin":  [
-                                                         8.5,
-                                                         8,
-                                                         8
-                                                     ],
-                                          "x":  90,
-                                          "y":  0,
-                                          "z":  0
-                                      }
+                                   }
                      },
                      {
                          "from":  [
@@ -361,17 +321,7 @@
                                                            ],
                                                     "texture":  "#texture"
                                                 }
-                                   },
-                         "rotation":  {
-                                          "origin":  [
-                                                         8.5,
-                                                         8,
-                                                         8
-                                                     ],
-                                          "x":  90,
-                                          "y":  0,
-                                          "z":  0
-                                      }
+                                   }
                      },
                      {
                          "from":  [
@@ -439,17 +389,7 @@
                                                            ],
                                                     "texture":  "#texture"
                                                 }
-                                   },
-                         "rotation":  {
-                                          "origin":  [
-                                                         8.5,
-                                                         8,
-                                                         8
-                                                     ],
-                                          "x":  90,
-                                          "y":  0,
-                                          "z":  0
-                                      }
+                                   }
                      },
                      {
                          "from":  [
@@ -499,17 +439,7 @@
                                                            ],
                                                     "texture":  "#texture"
                                                 }
-                                   },
-                         "rotation":  {
-                                          "origin":  [
-                                                         8.5,
-                                                         8,
-                                                         8
-                                                     ],
-                                          "x":  90,
-                                          "y":  0,
-                                          "z":  0
-                                      }
+                                   }
                      },
                      {
                          "from":  [
@@ -559,17 +489,7 @@
                                                            ],
                                                     "texture":  "#texture"
                                                 }
-                                   },
-                         "rotation":  {
-                                          "origin":  [
-                                                         8.5,
-                                                         8,
-                                                         8
-                                                     ],
-                                          "x":  90,
-                                          "y":  0,
-                                          "z":  0
-                                      }
+                                   }
                      },
                      {
                          "from":  [
@@ -619,17 +539,7 @@
                                                            ],
                                                     "texture":  "#texture"
                                                 }
-                                   },
-                         "rotation":  {
-                                          "origin":  [
-                                                         8.5,
-                                                         8,
-                                                         8
-                                                     ],
-                                          "x":  90,
-                                          "y":  0,
-                                          "z":  0
-                                      }
+                                   }
                      },
                      {
                          "from":  [
@@ -688,17 +598,7 @@
                                                            ],
                                                     "texture":  "#texture"
                                                 }
-                                   },
-                         "rotation":  {
-                                          "origin":  [
-                                                         8.5,
-                                                         8,
-                                                         8
-                                                     ],
-                                          "x":  90,
-                                          "y":  0,
-                                          "z":  0
-                                      }
+                                   }
                      },
                      {
                          "from":  [
@@ -757,17 +657,7 @@
                                                            ],
                                                     "texture":  "#texture"
                                                 }
-                                   },
-                         "rotation":  {
-                                          "origin":  [
-                                                         8.5,
-                                                         8,
-                                                         8
-                                                     ],
-                                          "x":  90,
-                                          "y":  0,
-                                          "z":  0
-                                      }
+                                   }
                      },
                      {
                          "from":  [
@@ -835,23 +725,13 @@
                                                            ],
                                                     "texture":  "#texture"
                                                 }
-                                   },
-                         "rotation":  {
-                                          "origin":  [
-                                                         8.5,
-                                                         8,
-                                                         8
-                                                     ],
-                                          "x":  90,
-                                          "y":  0,
-                                          "z":  0
-                                      }
+                                   }
                      }
                  ],
     "display":  {
                     "thirdperson_righthand":  {
                                                   "rotation":  [
-                                                                   -75,
+                                                                   15,
                                                                    0,
                                                                    0
                                                                ],
@@ -868,7 +748,7 @@
                                               },
                     "thirdperson_lefthand":  {
                                                  "rotation":  [
-                                                                  -75,
+                                                                  15,
                                                                   0,
                                                                   0
                                                               ],
@@ -885,7 +765,7 @@
                                              },
                     "firstperson_righthand":  {
                                                   "rotation":  [
-                                                                   90,
+                                                                   0,
                                                                    0,
                                                                    180
                                                                ],
@@ -902,7 +782,7 @@
                                               },
                     "firstperson_lefthand":  {
                                                  "rotation":  [
-                                                                  90,
+                                                                  0,
                                                                   0,
                                                                   180
                                                               ],

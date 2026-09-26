@@ -7,14 +7,14 @@ import com.vnap.network.HurtEffectPayload;
 import com.vnap.network.VillagerNewsSettingsPayload;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityRenderLayerRegistrationCallback;
+import net.fabricmc.fabric.api.client.rendering.v1.LivingEntityFeatureRendererRegistrationCallback;
 import net.fabricmc.fabric.api.event.player.UseItemCallback;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
 import net.fabricmc.fabric.api.client.networking.v1.ClientPlayConnectionEvents;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.entity.VillagerRenderer;
-import net.minecraft.world.InteractionResult;
-import net.minecraft.world.entity.EntityTypes;
+import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.EntityType;
 import traben.entity_model_features.EMFAnimationApi;
 
 import java.io.IOException;
@@ -44,8 +44,8 @@ public final class VillagerNewsAddonPortClient implements ClientModInitializer {
 			throw new IllegalStateException("Could not register Villager News EMF animation variables", exception);
 		}
 
-		LivingEntityRenderLayerRegistrationCallback.EVENT.register((entityType, entityRenderer, helper, context) -> {
-			if (entityType == EntityTypes.VILLAGER && entityRenderer instanceof VillagerRenderer villagerRenderer) {
+		LivingEntityFeatureRendererRegistrationCallback.EVENT.register((entityType, entityRenderer, helper, context) -> {
+			if (entityType == EntityType.VILLAGER && entityRenderer instanceof VillagerRenderer villagerRenderer) {
 				helper.register(new VillagerNewsSignLayer(villagerRenderer));
 			}
 		});
@@ -70,11 +70,13 @@ public final class VillagerNewsAddonPortClient implements ClientModInitializer {
 			VillagerNewsSettingsState.reset();
 		});
 		UseItemCallback.EVENT.register((player, level, hand) -> {
-			if (!level.isClientSide()) return InteractionResult.PASS;
-			if (player.getItemInHand(hand).getItem() != VillagerNewsItems.HANDBOOK) return InteractionResult.PASS;
-			Minecraft.getInstance().setScreenAndShow(new HandbookScreen());
-			return InteractionResult.SUCCESS;
+			if (!level.isClientSide()) return InteractionResultHolder.pass(player.getItemInHand(hand));
+			if (player.getItemInHand(hand).getItem() != VillagerNewsItems.HANDBOOK) return InteractionResultHolder.pass(player.getItemInHand(hand));
+			Minecraft.getInstance().setScreen(new HandbookScreen());
+			return InteractionResultHolder.success(player.getItemInHand(hand));
 		});
+		ItemDisplayModels.register();
+		SubtitleLanguages.register();
 		DialogueSubtitleState.register();
 		ClientTickEvents.END_CLIENT_TICK.register(client -> {
 			DialogueSoundState.tick(client);

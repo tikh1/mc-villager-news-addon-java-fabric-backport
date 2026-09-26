@@ -1,0 +1,19 @@
+{
+	"schemaVersion": 1,
+	"id": "villager-news-addon-port-gametest",
+	"version": "1.0.0",
+	"name": "Villager News Addon Port Game Tests",
+	"environment": "*",
+	"entrypoints": {
+		"fabric-gametest": [
+			"com.vnap.gametest.VillagerNewsGameTests"
+		],
+		"client": [
+			"com.vnap.gametest.VisualSnapshot"
+		]
+	},
+	"depends": {
+		"villager-news-addon-port": "*",
+		"fabric-gametest-api-v1": "*"
+	}
+}

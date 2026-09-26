@@ -1,18 +1,15 @@
 package com.vnap.client;
 
-import com.vnap.VillagerNewsAddonPort;
 import com.vnap.dialogue.DialogueCatalog;
 import com.vnap.network.DialogueAnimationPayload;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.HudElementRegistry;
-import net.fabricmc.fabric.api.client.rendering.v1.hud.VanillaHudElements;
+import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.DeltaTracker;
 import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.world.entity.Entity;
-import net.minecraft.world.entity.npc.villager.Villager;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -32,11 +29,7 @@ public final class DialogueSubtitleState {
 	}
 
 	public static void register() {
-		HudElementRegistry.attachElementAfter(
-			VanillaHudElements.OVERLAY_MESSAGE,
-			VillagerNewsAddonPort.id("dialogue_subtitles"),
-			DialogueSubtitleState::render
-		);
+		HudRenderCallback.EVENT.register(DialogueSubtitleState::render);
 	}
 
 	public static void start(DialogueAnimationPayload payload) {
@@ -64,7 +57,7 @@ public final class DialogueSubtitleState {
 		Iterator<Map.Entry<UUID, ActiveSubtitle>> iterator = ACTIVE.entrySet().iterator();
 		while (iterator.hasNext()) {
 			Map.Entry<UUID, ActiveSubtitle> entry = iterator.next();
-			Entity entity = minecraft.level.getEntity(entry.getKey());
+			Entity entity = ClientEntities.get(minecraft.level, entry.getKey());
 			if (now >= entry.getValue().endNanos() || entity != null && !entity.isAlive()) iterator.remove();
 		}
 	}
@@ -73,21 +66,22 @@ public final class DialogueSubtitleState {
 		ACTIVE.clear();
 	}
 
-	private static void render(GuiGraphicsExtractor graphics, DeltaTracker deltaTracker) {
+	private static void render(GuiGraphics graphics, DeltaTracker deltaTracker) {
 		Minecraft minecraft = Minecraft.getInstance();
-		if (minecraft.level == null || minecraft.player == null || !VillagerNewsClientSettings.showSubtitles()) return;
+		if (minecraft.level == null || minecraft.player == null || minecraft.options.hideGui
+				|| !VillagerNewsClientSettings.showSubtitles()) return;
 		long now = System.nanoTime();
 		List<VisibleSubtitle> visible = new ArrayList<>();
 		for (Map.Entry<UUID, ActiveSubtitle> entry : ACTIVE.entrySet()) {
 			ActiveSubtitle active = entry.getValue();
 			if (now >= active.endNanos()) continue;
-			Entity entity = minecraft.level.getEntity(entry.getKey());
+			Entity entity = ClientEntities.get(minecraft.level, entry.getKey());
 			if (entity == null || !entity.isAlive()) continue;
 			double distanceSquared = minecraft.player.distanceToSqr(entity);
 			if (distanceSquared > RANGE_SQUARED) continue;
 			int frame = active.frame(now);
 			if (frame < 0) continue;
-			Component transcript = Component.translatable(active.subtitles().get(frame).key());
+			Component transcript = Component.literal(SubtitleLanguages.subtitle(active.subtitles().get(frame).key()));
 			visible.add(new VisibleSubtitle(distanceSquared, subtitleLine(entity, transcript)));
 		}
 		visible.sort(Comparator.comparingDouble(VisibleSubtitle::distanceSquared));
@@ -101,10 +95,7 @@ public final class DialogueSubtitleState {
 	}
 
 	private static Component subtitleLine(Entity entity, Component transcript) {
-		Component name = entity.getName();
-		if (entity instanceof Villager villager && !villager.hasCustomName()) {
-			name = villager.getVillagerData().profession().value().name();
-		}
+		Component name = SubtitleLanguages.speakerName(entity);
 		MutableComponent line = Component.empty();
 		line.append(name.copy().withStyle(ChatFormatting.YELLOW));
 		line.append(Component.literal(": ").withStyle(ChatFormatting.YELLOW));
@@ -118,13 +109,13 @@ public final class DialogueSubtitleState {
 		return (float) Math.max(0.65, Math.min(0.9, 0.95 - distance / RANGE * 0.3));
 	}
 
-	private static void drawCentered(GuiGraphicsExtractor graphics, Minecraft minecraft, Component text, float y, float scale) {
+	private static void drawCentered(GuiGraphics graphics, Minecraft minecraft, Component text, float y, float scale) {
 		int width = minecraft.font.width(text);
-		graphics.pose().pushMatrix();
-		graphics.pose().translate(graphics.guiWidth() / 2.0F, y);
-		graphics.pose().scale(scale, scale);
-		graphics.text(minecraft.font, text, -width / 2, 0, 0xFFFFFFFF, true);
-		graphics.pose().popMatrix();
+		graphics.pose().pushPose();
+		graphics.pose().translate(graphics.guiWidth() / 2.0F, y, 0.0F);
+		graphics.pose().scale(scale, scale, 1.0F);
+		graphics.drawString(minecraft.font, text, -width / 2, 0, 0xFFFFFFFF, true);
+		graphics.pose().popPose();
 	}
 
 	private record VisibleSubtitle(double distanceSquared, Component text) {

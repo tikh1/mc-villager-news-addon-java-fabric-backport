@@ -1,12 +1,14 @@
 {
   "required": true,
   "package": "com.vnap.mixin.client",
-  "compatibilityLevel": "JAVA_25",
+  "compatibilityLevel": "JAVA_21",
   "client": [
-	"EMFModelPartMixin",
+    "EMFModelPartMixin",
+    "ItemRendererMixin",
+    "LevelEntitiesAccessor",
+    "LivingEntityRendererMixin",
     "VillagerProfessionLayerMixin",
-    "VillagerRendererMixin",
-    "VillagerRenderStateMixin"
+    "VillagerRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

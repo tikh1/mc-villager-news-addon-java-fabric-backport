@@ -14,7 +14,7 @@ import com.vnap.sound.SupplementalSoundCatalog;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.networking.v1.PayloadTypeRegistry;
 
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,10 +27,10 @@ public class VillagerNewsAddonPort implements ModInitializer {
 	@Override
 	public void onInitialize() {
 		VillagerNewsItems.register();
-		PayloadTypeRegistry.clientboundPlay().register(DialogueAnimationPayload.TYPE, DialogueAnimationPayload.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(HurtEffectPayload.TYPE, HurtEffectPayload.CODEC);
-		PayloadTypeRegistry.clientboundPlay().register(VillagerNewsSettingsPayload.TYPE, VillagerNewsSettingsPayload.CODEC);
-		PayloadTypeRegistry.serverboundPlay().register(VillagerNewsSettingsPayload.TYPE, VillagerNewsSettingsPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(DialogueAnimationPayload.TYPE, DialogueAnimationPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(HurtEffectPayload.TYPE, HurtEffectPayload.CODEC);
+		PayloadTypeRegistry.playS2C().register(VillagerNewsSettingsPayload.TYPE, VillagerNewsSettingsPayload.CODEC);
+		PayloadTypeRegistry.playC2S().register(VillagerNewsSettingsPayload.TYPE, VillagerNewsSettingsPayload.CODEC);
 		VillagerNewsSettings.load();
 		VillagerNewsSettingsNetwork.register();
 		SupplementalSoundCatalog.register();
@@ -40,7 +40,7 @@ public class VillagerNewsAddonPort implements ModInitializer {
 		LOGGER.info("Villager News models, textures, and contextual dialogue are ready.");
 	}
 
-	public static Identifier id(String path) {
-		return Identifier.fromNamespaceAndPath(MOD_ID, path);
+	public static ResourceLocation id(String path) {
+		return ResourceLocation.fromNamespaceAndPath(MOD_ID, path);
 	}
 }

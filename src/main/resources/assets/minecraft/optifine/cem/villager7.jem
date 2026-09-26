@@ -3,6 +3,7 @@
     64,
     64
   ],
+  "texture": "minecraft:textures/entity/villager/villager_baby.png",
   "models": [
     {
       "id": "villager_news_baby_base_root",

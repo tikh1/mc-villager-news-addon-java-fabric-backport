@@ -6,7 +6,7 @@ import com.google.gson.JsonParser;
 import com.vnap.VillagerNewsAddonPort;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 
 import java.io.IOException;
@@ -51,7 +51,7 @@ public final class DialogueCatalog {
 							subtitleValue.get("key").getAsString()
 						));
 					}
-					Identifier soundId = VillagerNewsAddonPort.id("dialogue." + groupId + "." + index);
+					ResourceLocation soundId = VillagerNewsAddonPort.id("dialogue." + groupId + "." + index);
 					SoundEvent sound = Registry.register(
 						BuiltInRegistries.SOUND_EVENT,
 						soundId,

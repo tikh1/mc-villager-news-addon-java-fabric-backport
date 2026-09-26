@@ -2,16 +2,21 @@ package com.vnap.mixin;
 
 import com.vnap.dialogue.ContextualDialogueController;
 import com.vnap.entity.VillagerNewsData;
+import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.NbtOps;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
-import net.minecraft.world.entity.npc.villager.Villager;
-import net.minecraft.world.entity.npc.villager.VillagerData;
-import net.minecraft.world.entity.npc.villager.VillagerProfession;
+import net.minecraft.world.entity.MobSpawnType;
+import net.minecraft.world.entity.SpawnGroupData;
+import net.minecraft.world.entity.npc.Villager;
+import net.minecraft.world.entity.npc.VillagerData;
+import net.minecraft.world.entity.npc.VillagerProfession;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.trading.MerchantOffers;
-import net.minecraft.world.level.storage.ValueInput;
-import net.minecraft.world.level.storage.ValueOutput;
+import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.level.ServerLevelAccessor;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Unique;
 import org.spongepowered.asm.mixin.injection.At;
@@ -19,6 +24,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 import org.spongepowered.asm.mixin.injection.Redirect;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
 @Mixin(Villager.class)
 public abstract class VillagerDataMixin implements VillagerNewsData {
@@ -34,6 +40,8 @@ public abstract class VillagerDataMixin implements VillagerNewsData {
 	private VillagerData vnap$originalVillagerData;
 	@Unique
 	private MerchantOffers vnap$originalVillagerOffers;
+	@Unique
+	private MobSpawnType vnap$spawnType;
 
 	@Inject(method = "defineSynchedData", at = @At("TAIL"))
 	private void vnap$defineData(SynchedEntityData.Builder builder, CallbackInfo ci) {
@@ -43,29 +51,47 @@ public abstract class VillagerDataMixin implements VillagerNewsData {
 		builder.define(VNAP_SIGN_TYPE, -1);
 	}
 
+	@Inject(method = "finalizeSpawn", at = @At("HEAD"))
+	private void vnap$rememberSpawnType(ServerLevelAccessor level, DifficultyInstance difficulty, MobSpawnType spawnType,
+			SpawnGroupData spawnData, CallbackInfoReturnable<SpawnGroupData> cir) {
+		vnap$spawnType = spawnType;
+		// worldgen villagers are saved to nbt BEFORE they load so the reason is kept as a tag
+		if (spawnType == MobSpawnType.STRUCTURE) ((Villager) (Object) this).addTag(STRUCTURE_SPAWN_TAG);
+	}
+
 	@Inject(method = "addAdditionalSaveData", at = @At("TAIL"))
-	private void vnap$saveData(ValueOutput output, CallbackInfo ci) {
+	private void vnap$saveData(CompoundTag output, CallbackInfo ci) {
+		Villager villager = (Villager) (Object) this;
 		output.putBoolean("VillagerNewsHasNose", vnap$hasNose());
 		output.putInt("VillagerNewsCosmetic", vnap$cosmetic());
 		output.putInt("VillagerNewsSignMessage", vnap$signMessage());
 		output.putInt("VillagerNewsSignType", vnap$signType());
 		if (vnap$originalVillagerData != null && vnap$originalVillagerOffers != null) {
-			output.store("VillagerNewsOriginalData", VillagerData.CODEC, vnap$originalVillagerData);
-			output.store("VillagerNewsOriginalOffers", MerchantOffers.CODEC, vnap$originalVillagerOffers);
+			VillagerData.CODEC.encodeStart(NbtOps.INSTANCE, vnap$originalVillagerData)
+				.ifSuccess(tag -> output.put("VillagerNewsOriginalData", tag));
+			MerchantOffers.CODEC.encodeStart(villager.registryAccess().createSerializationContext(NbtOps.INSTANCE), vnap$originalVillagerOffers)
+				.ifSuccess(tag -> output.put("VillagerNewsOriginalOffers", tag));
 		}
 	}
 
 	@Inject(method = "readAdditionalSaveData", at = @At("TAIL"))
-	private void vnap$loadData(ValueInput input, CallbackInfo ci) {
-		vnap$setHasNose(input.getBooleanOr("VillagerNewsHasNose", true));
-		vnap$setCosmetic(input.getIntOr("VillagerNewsCosmetic", 0));
-		int signMessage = input.getIntOr("VillagerNewsSignMessage", -1);
+	private void vnap$loadData(CompoundTag input, CallbackInfo ci) {
+		Villager villager = (Villager) (Object) this;
+		vnap$setHasNose(!input.contains("VillagerNewsHasNose", Tag.TAG_BYTE) || input.getBoolean("VillagerNewsHasNose"));
+		vnap$setCosmetic(input.getInt("VillagerNewsCosmetic"));
+		int signMessage = input.contains("VillagerNewsSignMessage", Tag.TAG_INT) ? input.getInt("VillagerNewsSignMessage") : -1;
 		vnap$setSignMessage(signMessage);
-		int equippedSign = ContextualDialogueController.signType(((Villager) (Object) this).getMainHandItem());
-		vnap$setSignType(input.getIntOr("VillagerNewsSignType", equippedSign >= 0 ? equippedSign : signMessage >= 0 ? 0 : -1));
-		if (equippedSign >= 0) ((Villager) (Object) this).setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, ItemStack.EMPTY);
-		vnap$originalVillagerData = input.read("VillagerNewsOriginalData", VillagerData.CODEC).orElse(null);
-		vnap$originalVillagerOffers = input.read("VillagerNewsOriginalOffers", MerchantOffers.CODEC).orElse(null);
+		int equippedSign = ContextualDialogueController.signType(villager.getMainHandItem());
+		vnap$setSignType(input.contains("VillagerNewsSignType", Tag.TAG_INT) ? input.getInt("VillagerNewsSignType")
+			: equippedSign >= 0 ? equippedSign : signMessage >= 0 ? 0 : -1);
+		if (equippedSign >= 0) villager.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, ItemStack.EMPTY);
+		vnap$originalVillagerData = input.contains("VillagerNewsOriginalData")
+			? VillagerData.CODEC.parse(NbtOps.INSTANCE, input.get("VillagerNewsOriginalData")).result().orElse(null)
+			: null;
+		vnap$originalVillagerOffers = input.contains("VillagerNewsOriginalOffers")
+			? MerchantOffers.CODEC.parse(villager.registryAccess().createSerializationContext(NbtOps.INSTANCE),
+				input.get("VillagerNewsOriginalOffers")).result().orElse(null)
+			: null;
 		if (vnap$originalVillagerData == null || vnap$originalVillagerOffers == null) {
 			vnap$originalVillagerData = null;
 			vnap$originalVillagerOffers = null;
@@ -74,7 +100,7 @@ public abstract class VillagerDataMixin implements VillagerNewsData {
 
 	@Redirect(
 		method = "customServerAiStep",
-		at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/npc/villager/Villager;stopTrading()V")
+		at = @At(value = "INVOKE", target = "Lnet/minecraft/world/entity/npc/Villager;stopTrading()V")
 	)
 	private void vnap$keepSpecialTradeOpen(Villager villager) {
 		if (!ContextualDialogueController.isSpecialTrader(villager)) villager.setTradingPlayer(null);
@@ -84,8 +110,17 @@ public abstract class VillagerDataMixin implements VillagerNewsData {
 	private VillagerData vnap$preventSpecialProfession(VillagerData value) {
 		Villager villager = (Villager) (Object) this;
 		return ContextualDialogueController.isSpecialTrader(villager)
-			? value.withProfession(villager.level().registryAccess(), VillagerProfession.NONE).withLevel(1)
+			? value.setProfession(VillagerProfession.NONE).setLevel(1)
 			: value;
+	}
+
+	@Override
+	public MobSpawnType vnap$consumeSpawnType() {
+		Villager villager = (Villager) (Object) this;
+		MobSpawnType spawnType = vnap$spawnType;
+		vnap$spawnType = null;
+		if (villager.removeTag(STRUCTURE_SPAWN_TAG) && spawnType == null) spawnType = MobSpawnType.STRUCTURE;
+		return spawnType;
 	}
 
 	@Override

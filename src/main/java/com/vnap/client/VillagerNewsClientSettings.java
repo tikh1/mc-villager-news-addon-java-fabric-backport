@@ -16,6 +16,7 @@ public final class VillagerNewsClientSettings {
 	private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
 	private static final Path PATH = FabricLoader.getInstance().getConfigDir().resolve("villager-news-addon-port-client.json");
 	private static boolean showSubtitles = true;
+	private static String subtitleLanguage = SubtitleLanguages.AUTO;
 
 	private VillagerNewsClientSettings() {
 	}
@@ -28,9 +29,12 @@ public final class VillagerNewsClientSettings {
 		try {
 			JsonObject root = JsonParser.parseString(Files.readString(PATH, StandardCharsets.UTF_8)).getAsJsonObject();
 			showSubtitles = !root.has("showSubtitles") || root.get("showSubtitles").getAsBoolean();
+			subtitleLanguage = root.has("subtitleLanguage") ? root.get("subtitleLanguage").getAsString()
+				: SubtitleLanguages.AUTO;
 		} catch (IOException | RuntimeException exception) {
 			VillagerNewsAddonPort.LOGGER.warn("Could not load Villager News client settings; using defaults", exception);
 			showSubtitles = true;
+			subtitleLanguage = SubtitleLanguages.AUTO;
 			save();
 		}
 	}
@@ -44,9 +48,19 @@ public final class VillagerNewsClientSettings {
 		save();
 	}
 
+	public static String subtitleLanguage() {
+		return subtitleLanguage;
+	}
+
+	public static synchronized void setSubtitleLanguage(String code) {
+		subtitleLanguage = code;
+		save();
+	}
+
 	private static void save() {
 		JsonObject root = new JsonObject();
 		root.addProperty("showSubtitles", showSubtitles);
+		root.addProperty("subtitleLanguage", subtitleLanguage);
 		try {
 			Files.createDirectories(PATH.getParent());
 			Files.writeString(PATH, GSON.toJson(root) + System.lineSeparator(), StandardCharsets.UTF_8);

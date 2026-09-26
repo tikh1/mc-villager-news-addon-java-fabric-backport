@@ -3,7 +3,6 @@ package com.vnap.network;
 import com.vnap.config.VillagerNewsSettings;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayConnectionEvents;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
-import net.minecraft.server.permissions.Permissions;
 import net.minecraft.server.level.ServerPlayer;
 
 public final class VillagerNewsSettingsNetwork {
@@ -34,7 +33,6 @@ public final class VillagerNewsSettingsNetwork {
 	}
 
 	private static boolean canEdit(ServerPlayer player) {
-		return player.level().getServer().isSingleplayerOwner(player.nameAndId())
-			|| player.permissions().hasPermission(Permissions.COMMANDS_GAMEMASTER);
+		return player.server.isSingleplayerOwner(player.getGameProfile()) || player.hasPermissions(2);
 	}
 }

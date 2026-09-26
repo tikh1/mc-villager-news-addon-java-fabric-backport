@@ -4,61 +4,70 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
 import com.mojang.math.Axis;
 import com.vnap.VillagerNewsAddonPort;
-import net.minecraft.client.model.npc.VillagerModel;
-import net.minecraft.client.renderer.SubmitNodeCollector;
+import com.vnap.entity.VillagerNewsData;
+import net.minecraft.client.model.VillagerModel;
+import net.minecraft.client.model.geom.ModelPart;
+import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.entity.RenderLayerParent;
 import net.minecraft.client.renderer.entity.layers.RenderLayer;
-import net.minecraft.client.renderer.entity.state.VillagerRenderState;
-import net.minecraft.client.renderer.rendertype.RenderTypes;
 import net.minecraft.client.renderer.texture.OverlayTexture;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.npc.Villager;
 import traben.entity_model_features.models.IEMFModel;
 import traben.entity_model_features.models.animation.EMFAttachment;
 
 import java.util.function.Consumer;
 
-public final class VillagerNewsSignLayer extends RenderLayer<VillagerRenderState, VillagerModel> {
-	private static final Identifier[] BOARD_TEXTURES = {
+public final class VillagerNewsSignLayer extends RenderLayer<Villager, VillagerModel<Villager>> {
+	private static final ResourceLocation[] BOARD_TEXTURES = {
 		minecraft("oak"), minecraft("spruce"), minecraft("birch"), minecraft("jungle"),
 		minecraft("acacia"), minecraft("dark_oak"), minecraft("mangrove"), minecraft("cherry"),
-		minecraft("pale_oak"), minecraft("bamboo"), minecraft("crimson"), minecraft("warped")
+		// pale oak signs do NOT exist in 1.21.1 so this slot only keeps the indices stable
+		minecraft("oak"), minecraft("bamboo"), minecraft("crimson"), minecraft("warped")
 	};
-	private static final Identifier TEXT_TEXTURE = Identifier.fromNamespaceAndPath(
+	private static final ResourceLocation TEXT_TEXTURE = ResourceLocation.fromNamespaceAndPath(
 		VillagerNewsAddonPort.MOD_ID, "textures/entity/sign_text.png"
 	);
-	public VillagerNewsSignLayer(RenderLayerParent<VillagerRenderState, VillagerModel> renderer) {
+	public VillagerNewsSignLayer(RenderLayerParent<Villager, VillagerModel<Villager>> renderer) {
 		super(renderer);
 	}
 
 	@Override
-	public void submit(PoseStack poseStack, SubmitNodeCollector collector, int packedLight,
-			VillagerRenderState state, float yRot, float xRot) {
-		VillagerNewsRenderState sign = (VillagerNewsRenderState) state;
+	public void render(PoseStack poseStack, MultiBufferSource buffers, int packedLight, Villager villager,
+			float limbSwing, float limbSwingAmount, float partialTick, float ageInTicks, float netHeadYaw, float headPitch) {
+		VillagerNewsData sign = (VillagerNewsData) villager;
 		int type = sign.vnap$signType();
 		int message = sign.vnap$signMessage();
-		if (state.isInvisible || state.isBaby || type < 0 || type >= BOARD_TEXTURES.length || message < 0 || message >= 87) return;
+		if (villager.isInvisible() || villager.isBaby() || type < 0 || type >= BOARD_TEXTURES.length || message < 0 || message >= 87) return;
 		poseStack.pushPose();
-		Consumer<PoseStack> positioner = getParentModel() instanceof IEMFModel emfModel
+		Consumer<PoseStack> positioner = getParentModel() instanceof IEMFModel emfModel && emfModel.emf$isEMFModel()
 			? emfModel.emf$getEMFRootModel().getPositionerForAttachment(EMFAttachment.Type.VILLAGER)
 			: null;
 		if (positioner == null) {
-			getParentModel().translateToArms(state, poseStack);
+			translateToArms(getParentModel(), poseStack);
 		} else {
 			positioner.accept(poseStack);
 		}
 		poseStack.translate(0.0F, 5.75F / 16.0F, -1.75F / 16.0F);
-		poseStack.rotateDegrees(Axis.XP, 42.97F);
-		collector.submitCustomGeometry(poseStack, RenderTypes.entityCutout(BOARD_TEXTURES[type]),
-			(pose, vertices) -> drawBoard(pose, vertices, packedLight));
-		collector.submitCustomGeometry(poseStack, RenderTypes.entityCutout(TEXT_TEXTURE),
-			(pose, vertices) -> drawText(pose, vertices, packedLight, message));
+		poseStack.mulPose(Axis.XP.rotationDegrees(42.97F));
+		PoseStack.Pose pose = poseStack.last();
+		drawBoard(pose, buffers.getBuffer(RenderType.entityCutout(BOARD_TEXTURES[type])), packedLight);
+		drawText(pose, buffers.getBuffer(RenderType.entityCutout(TEXT_TEXTURE)), packedLight, message);
 		poseStack.popPose();
 	}
 
-	private static Identifier minecraft(String wood) {
-		return Identifier.withDefaultNamespace("textures/block/" + wood + "_sign.png");
+	private static void translateToArms(VillagerModel<Villager> model, PoseStack poseStack) {
+		ModelPart root = model.root();
+		root.translateAndRotate(poseStack);
+		root.getChild("arms").translateAndRotate(poseStack);
 	}
 
+	private static ResourceLocation minecraft(String wood) {
+		return ResourceLocation.withDefaultNamespace("textures/entity/signs/" + wood + ".png");
+	}
+
+	// uvs follow the 64x32 vanilla sign entity texture
 	private static void drawBoard(PoseStack.Pose pose, VertexConsumer vertices, int light) {
 		float left = -0.50625F;
 		float right = 0.50625F;
@@ -67,17 +76,17 @@ public final class VillagerNewsSignLayer extends RenderLayer<VillagerRenderState
 		float front = -0.04792F;
 		float back = 0.04792F;
 		quad(pose, vertices, light, left, bottom, front, right, bottom, front, right, top, front, left, top, front,
-			0.0F, 14.0F / 16.0F, 12.0F / 16.0F, 8.0F / 16.0F, 0.0F, 0.0F, -1.0F);
+			2.0F / 64.0F, 14.0F / 32.0F, 26.0F / 64.0F, 2.0F / 32.0F, 0.0F, 0.0F, -1.0F);
 		quad(pose, vertices, light, right, bottom, back, left, bottom, back, left, top, back, right, top, back,
-			0.0F, 7.0F / 16.0F, 12.0F / 16.0F, 1.0F / 16.0F, 0.0F, 0.0F, 1.0F);
-		quad(pose, vertices, light, left, top, back, left, top, front, right, top, front, right, top, back,
-			0.0F, 1.0F / 16.0F, 12.0F / 16.0F, 0.0F, 0.0F, -1.0F, 0.0F);
-		quad(pose, vertices, light, left, bottom, front, left, bottom, back, right, bottom, back, right, bottom, front,
-			0.0F, 15.0F / 16.0F, 12.0F / 16.0F, 14.0F / 16.0F, 0.0F, 1.0F, 0.0F);
+			28.0F / 64.0F, 14.0F / 32.0F, 52.0F / 64.0F, 2.0F / 32.0F, 0.0F, 0.0F, 1.0F);
+		quad(pose, vertices, light, left, top, back, right, top, back, right, top, front, left, top, front,
+			2.0F / 64.0F, 0.0F, 26.0F / 64.0F, 2.0F / 32.0F, 0.0F, -1.0F, 0.0F);
+		quad(pose, vertices, light, left, bottom, front, right, bottom, front, right, bottom, back, left, bottom, back,
+			26.0F / 64.0F, 0.0F, 50.0F / 64.0F, 2.0F / 32.0F, 0.0F, 1.0F, 0.0F);
 		quad(pose, vertices, light, left, bottom, back, left, bottom, front, left, top, front, left, top, back,
-			12.0F / 16.0F, 14.0F / 16.0F, 13.0F / 16.0F, 8.0F / 16.0F, -1.0F, 0.0F, 0.0F);
+			0.0F, 14.0F / 32.0F, 2.0F / 64.0F, 2.0F / 32.0F, -1.0F, 0.0F, 0.0F);
 		quad(pose, vertices, light, right, bottom, front, right, bottom, back, right, top, back, right, top, front,
-			12.0F / 16.0F, 7.0F / 16.0F, 13.0F / 16.0F, 1.0F / 16.0F, 1.0F, 0.0F, 0.0F);
+			26.0F / 64.0F, 14.0F / 32.0F, 28.0F / 64.0F, 2.0F / 32.0F, 1.0F, 0.0F, 0.0F);
 	}
 
 	private static void drawText(PoseStack.Pose pose, VertexConsumer vertices, int light, int message) {

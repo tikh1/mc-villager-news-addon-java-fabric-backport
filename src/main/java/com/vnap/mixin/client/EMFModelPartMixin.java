@@ -3,7 +3,7 @@ package com.vnap.mixin.client;
 import com.vnap.client.RainbowNoseRenderState;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
@@ -15,14 +15,14 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 import traben.entity_model_features.models.parts.EMFModelPart;
 import traben.entity_model_features.models.parts.EMFModelPartCustom;
 
-@Mixin(value = EMFModelPart.class, remap = false)
+@Mixin(EMFModelPart.class)
 public abstract class EMFModelPartMixin {
-	@Shadow public Identifier textureOverride;
-	@Unique private static final Identifier VNAP$RAINBOW_TEXTURE = Identifier.fromNamespaceAndPath("villager-news-addon-port", "textures/entity/rainbow_nose.png");
-	@Unique private Identifier vnap$previousTexture;
+	@Shadow(remap = false) public ResourceLocation textureOverride;
+	@Unique private static final ResourceLocation VNAP$RAINBOW_TEXTURE = ResourceLocation.fromNamespaceAndPath("villager-news-addon-port", "textures/entity/rainbow_nose.png");
+	@Unique private ResourceLocation vnap$previousTexture;
 	@Unique private boolean vnap$rainbowTextureActive;
 
-	@Inject(method = "render", at = @At("HEAD"))
+	@Inject(method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V", at = @At("HEAD"))
 	private void vnap$beginRainbowTexture(PoseStack poseStack, VertexConsumer vertices, int light, int overlay, int color, CallbackInfo ci) {
 		if (!vnap$isRainbowNose()) return;
 		vnap$previousTexture = textureOverride;
@@ -30,7 +30,7 @@ public abstract class EMFModelPartMixin {
 		vnap$rainbowTextureActive = true;
 	}
 
-	@Inject(method = "render", at = @At("RETURN"))
+	@Inject(method = "render(Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/mojang/blaze3d/vertex/VertexConsumer;III)V", at = @At("RETURN"))
 	private void vnap$endRainbowTexture(PoseStack poseStack, VertexConsumer vertices, int light, int overlay, int color, CallbackInfo ci) {
 		if (!vnap$rainbowTextureActive) return;
 		textureOverride = vnap$previousTexture;
@@ -38,12 +38,13 @@ public abstract class EMFModelPartMixin {
 		vnap$rainbowTextureActive = false;
 	}
 
-	@ModifyVariable(method = "compile", at = @At("HEAD"), argsOnly = true, ordinal = 0)
+	// compile is private in vanilla so it is NOT remapped and both names are listed
+	@ModifyVariable(method = {"compile", "method_22702"}, at = @At("HEAD"), argsOnly = true, ordinal = 0, remap = false)
 	private int vnap$rainbowLight(int light) {
 		return vnap$isRainbowNose() ? 0xF000F0 : light;
 	}
 
-	@ModifyVariable(method = "compile", at = @At("HEAD"), argsOnly = true, ordinal = 2)
+	@ModifyVariable(method = {"compile", "method_22702"}, at = @At("HEAD"), argsOnly = true, ordinal = 2, remap = false)
 	private int vnap$rainbowNose(int color) {
 		if (!vnap$isRainbowNose()) return color;
 		float phase = Mth.positiveModulo(RainbowNoseRenderState.cycleSeconds(), 6.0F);
@@ -61,7 +62,7 @@ public abstract class EMFModelPartMixin {
 	@Unique
 	private boolean vnap$isRainbowNose() {
 		return (Object) this instanceof EMFModelPartCustom part
-			&& part.id.contains("villager_news_base_fgk6")
+			&& part.id.endsWith("_base_fgk6") && !part.id.contains("wandering_trader")
 			&& RainbowNoseRenderState.active();
 	}
 }

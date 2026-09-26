@@ -1,0 +1,22 @@
+{
+  "_readme": [
+    "Example subtitle language file. Only files named with a Minecraft language code, such as de_de.json, are loaded.",
+    "To translate: in config/villager-news-addon-port/subtitles copy en_us.json and name the copy <code>.json,",
+    "set \"language\" to the name shown in the Villager News settings, and translate every line in \"subtitles\" without changing the keys.",
+    "Each key is <dialogue>.<variant>.<part>. Parts with the same dialogue and variant are shown one after another, so keep each part in its own key.",
+    "\"names\" is optional. It renames villagers without a name tag in front of their subtitles, for example Farmer or Wandering Trader.",
+    "Lines you leave out are shown in English. Choose Auto in the settings to follow the game language.",
+    "Optional: ai_translation_prompt.md in this folder is a ready-made prompt for AI coding assistants that drafts a full translation."
+  ],
+  "language": "Example Language",
+  "names": {
+    "entity.minecraft.villager.farmer": "Farmer",
+    "entity.minecraft.wandering_trader": "Wandering Trader"
+  },
+  "subtitles": {
+    "kxrhxt.0.0": "Aaghh!",
+    "kxrhxt.0.1": "Thank you!",
+    "kxrhxt.1.0": "Aah! I can smell again.",
+    "kxrhxt.1.1": "It's awful!"
+  }
+}

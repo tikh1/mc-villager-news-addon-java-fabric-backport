@@ -3,7 +3,7 @@ package com.vnap.sound;
 import com.vnap.VillagerNewsAddonPort;
 import net.minecraft.core.Registry;
 import net.minecraft.core.registries.BuiltInRegistries;
-import net.minecraft.resources.Identifier;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvent;
 
 import java.util.LinkedHashMap;
@@ -24,7 +24,7 @@ public final class SupplementalSoundCatalog {
 
 	public static void register() {
 		for (String effect : EFFECTS) {
-			Identifier id = VillagerNewsAddonPort.id("effect." + effect);
+			ResourceLocation id = VillagerNewsAddonPort.id("effect." + effect);
 			REGISTERED.put(effect, Registry.register(BuiltInRegistries.SOUND_EVENT, id, SoundEvent.createVariableRangeEvent(id)));
 		}
 	}

@@ -1,6 +1,44 @@
 plugins {
-	id 'net.fabricmc.fabric-loom' version "${loom_version}"
+	id 'net.fabricmc.fabric-loom-remap' version "${loom_version}"
 	id 'maven-publish'
+}
+
+sourceSets {
+	gametest {
+		compileClasspath += sourceSets.main.compileClasspath + sourceSets.main.output
+		runtimeClasspath += sourceSets.main.runtimeClasspath + sourceSets.main.output
+	}
+}
+
+loom {
+	mods {
+		"villager-news-addon-port" {
+			sourceSet sourceSets.main
+		}
+		"villager-news-addon-port-gametest" {
+			sourceSet sourceSets.gametest
+		}
+	}
+
+	runs {
+		// headless game test server
+		gametest {
+			server()
+			name = "Game Test"
+			vmArg "-Dfabric-api.gametest"
+			vmArg "-Dfabric-api.gametest.report-file=${project.layout.buildDirectory.get()}/gametest/junit.xml"
+			runDir "build/gametest"
+			source sourceSets.gametest
+		}
+		// dev only screenshot client using run/saves/vnap-visual-test
+		visualTest {
+			client()
+			name = "Visual Test"
+			vmArg "-Dvnap.visualTest=true"
+			programArgs "--quickPlaySingleplayer", "vnap-visual-test"
+			source sourceSets.gametest
+		}
+	}
 }
 
 repositories {
@@ -30,23 +68,31 @@ repositories {
 
 dependencies {
 	minecraft "com.mojang:minecraft:${project.minecraft_version}"
-	implementation "net.fabricmc:fabric-loader:${project.loader_version}"
+	mappings loom.officialMojangMappings()
+	modImplementation "net.fabricmc:fabric-loader:${project.loader_version}"
 
-	implementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
+	modImplementation "net.fabricmc.fabric-api:fabric-api:${project.fabric_api_version}"
 
-	compileOnly "maven.modrinth:4I1XuqiY:${project.emf_version}"
-	compileOnly "maven.modrinth:BVzZfTc1:${project.etf_version}"
-	compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+	modCompileOnly "maven.modrinth:4I1XuqiY:${project.emf_version}"
+	modCompileOnly "maven.modrinth:BVzZfTc1:${project.etf_version}"
+	modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"
+
+	modLocalRuntime "maven.modrinth:4I1XuqiY:${project.emf_version}"
+	modLocalRuntime "maven.modrinth:BVzZfTc1:${project.etf_version}"
+	modLocalRuntime "maven.modrinth:IMuO8COj:${project.esf_version}"
+	modLocalRuntime "com.terraformersmc:modmenu:${project.modmenu_version}"
 }
 
 processResources {
 	def version = project.version
+	def minecraftVersion = project.minecraft_version
 	def dialogueTestCommand = project.findProperty("dialogue_test_command")?.toString()?.toBoolean() ?: false
 	inputs.property "version", version
+	inputs.property "minecraft_version", minecraftVersion
 	inputs.property "dialogue_test_command", dialogueTestCommand
 
 	filesMatching("fabric.mod.json") {
-		expand "version": version
+		expand "version": version, "minecraft_version": minecraftVersion
 	}
 
 	filesMatching("villager-news-addon-port-build.properties") {
@@ -55,14 +101,12 @@ processResources {
 }
 
 tasks.withType(JavaCompile).configureEach {
-	it.options.release = 25
+	it.options.release = 21
 }
 
 java {
-	withSourcesJar()
-
-	sourceCompatibility = JavaVersion.VERSION_25
-	targetCompatibility = JavaVersion.VERSION_25
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
 }
 
 jar {

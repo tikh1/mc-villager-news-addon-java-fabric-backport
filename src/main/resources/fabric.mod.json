@@ -2,12 +2,15 @@
 	"schemaVersion": 1,
 	"id": "villager-news-addon-port",
 	"version": "${version}",
-	"name": "Villager News Addon Port",
-	"description": "A Java Edition port of Villager News with contextual dialogue and EMF, ETF, and ESF models, textures, and sounds.",
+	"name": "Villager News Addon Java Backport",
+	"description": "Minecraft 1.21.1 backport of the Villager News Java port with contextual dialogue, EMF, ETF and ESF models, textures and sounds, and translatable subtitles. Backport by tikhi.",
 	"authors": [
 		"Oreville Studios Ltd",
 		"Element Animation",
 		"Java port assembled by marcy"
+	],
+	"contributors": [
+		"tikhi (Minecraft 1.21.1 backport)"
 	],
 	"license": "All-Rights-Reserved",
 	"icon": "assets/villager-news-addon-port/icon.png",
@@ -32,11 +35,11 @@
 	],
 	"depends": {
 		"fabricloader": ">=0.19.5",
-		"minecraft": "~26.3",
-		"java": ">=25",
+		"minecraft": "${minecraft_version}",
+		"java": ">=21",
 		"fabric-api": "*",
-		"entity_model_features": ">=3.3.5",
-		"entity_texture_features": ">=7.2.1",
+		"entity_model_features": ">=3.3.9",
+		"entity_texture_features": ">=7.2.4",
 		"entity_sound_features": ">=0.8.2"
 	}
 }

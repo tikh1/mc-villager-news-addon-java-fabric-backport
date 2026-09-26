@@ -23,6 +23,9 @@ const handbookSource = readFileSync(join(root, "src/main/java/com/vnap/client/Ha
 const clientSource = readFileSync(join(root, "src/main/java/com/vnap/client/VillagerNewsAddonPortClient.java"), "utf8");
 const signLayerSource = readFileSync(join(root, "src/main/java/com/vnap/client/VillagerNewsSignLayer.java"), "utf8");
 const professionLayerSource = readFileSync(join(root, "src/main/java/com/vnap/mixin/client/VillagerProfessionLayerMixin.java"), "utf8");
+const stableVillagerDataSource = readFileSync(join(root, "src/main/java/com/vnap/client/StableVillagerData.java"), "utf8");
+const itemDisplayModelsSource = readFileSync(join(root, "src/main/java/com/vnap/client/ItemDisplayModels.java"), "utf8");
+const villagerDataMixinSource = readFileSync(join(root, "src/main/java/com/vnap/mixin/VillagerDataMixin.java"), "utf8");
 const villagerRendererSource = readFileSync(join(root, "src/main/java/com/vnap/mixin/client/VillagerRendererMixin.java"), "utf8");
 const villagerSoundSource = readFileSync(join(root, "src/main/java/com/vnap/mixin/VillagerSoundMixin.java"), "utf8");
 const subtitleSource = readFileSync(join(root, "src/main/java/com/vnap/client/DialogueSubtitleState.java"), "utf8");
@@ -56,6 +59,9 @@ function check(condition, message) {
   if (!condition) throw new Error(message);
 }
 
+const subtitleDirectory = join(modAssets, "subtitles");
+const englishSubtitles = JSON.parse(readFileSync(join(subtitleDirectory, "en_us.json"), "utf8")).subtitles;
+const subtitleId = (key) => key.replace("subtitles.villager-news-addon-port.dialogue.", "");
 const groups = Object.entries(catalog.groups);
 check(groups.length === 523, `Expected 523 dialogue groups, found ${groups.length}`);
 let variantCount = 0;
@@ -69,7 +75,7 @@ for (const [id, group] of groups) {
     check(event.subtitle === undefined, `Dialogue ${id}.${variant.index} still uses the bottom-right subtitle overlay`);
     check(variant.subtitles?.length > 0, `Dialogue ${id}.${variant.index} has no original subtitle timeline`);
     check(variant.subtitles.every((entry, index) => typeof entry.key === "string"
-      && typeof language[entry.key] === "string" && language[entry.key].length > 0
+      && typeof englishSubtitles[subtitleId(entry.key)] === "string" && englishSubtitles[subtitleId(entry.key)].length > 0
       && Number.isFinite(entry.time) && (index === 0 || entry.time >= variant.subtitles[index - 1].time)),
       `Dialogue ${id}.${variant.index} has an invalid subtitle timeline`);
 		subtitleCount += variant.subtitles.length;
@@ -83,6 +89,30 @@ for (const [id, group] of groups) {
 }
 check(variantCount === 2212, `Expected 2212 synchronized variants, found ${variantCount}`);
 check(subtitleCount === 3741, `Expected 3741 timed subtitles, found ${subtitleCount}`);
+check(!Object.keys(language).some((key) => key.startsWith("subtitles.villager-news-addon-port.dialogue.")),
+  "Dialogue subtitles are still in the game language file");
+for (const file of readdirSync(subtitleDirectory).filter((name) => /^[a-z]{2,3}_[a-z0-9]{2,4}\.json$/.test(name))) {
+  const translation = JSON.parse(readFileSync(join(subtitleDirectory, file), "utf8"));
+  check(typeof translation.language === "string" && translation.language.length > 0, `${file} has no language name`);
+  const missing = Object.keys(englishSubtitles).filter((key) => typeof translation.subtitles?.[key] !== "string"
+    || translation.subtitles[key].length === 0);
+  const unknown = Object.keys(translation.subtitles ?? {}).filter((key) => !(key in englishSubtitles));
+  check(missing.length === 0 && unknown.length === 0,
+    `${file} has ${missing.length} missing and ${unknown.length} unknown subtitle lines`);
+}
+for (const code of ["pt_br", "ru_ru", "zh_cn", "es_es", "tr_tr"]) {
+  check(existsSync(join(subtitleDirectory, `${code}.json`)), `The ${code} subtitle language is missing`);
+}
+const uiKeys = Object.keys(language);
+for (const code of ["pt_br", "ru_ru", "zh_cn", "es_es", "tr_tr"]) {
+  const translated = JSON.parse(readFileSync(join(modAssets, "lang", `${code}.json`), "utf8"));
+  check(uiKeys.every((key) => typeof translated[key] === "string" && translated[key].length > 0)
+    && Object.keys(translated).filter((key) => key.startsWith("handbook.")).length > 1000,
+    `The ${code} interface or handbook translation is incomplete`);
+}
+const exampleLanguage = JSON.parse(readFileSync(join(subtitleDirectory, "example_language.json"), "utf8"));
+check(Array.isArray(exampleLanguage._readme) && Object.keys(exampleLanguage.subtitles ?? {}).every((key) => key in englishSubtitles),
+  "The example subtitle language file is invalid");
 for (const effect of "abcdefghijklmnopqrstuv") {
   check(sounds[`effect.${effect}`]?.sounds?.[0]?.name === `villager-news-addon-port:effect/${effect}`
     && existsSync(join(modAssets, "sounds", "effect", `${effect}.ogg`)), `Missing supplemental Bedrock effect ${effect}`);
@@ -105,7 +135,8 @@ check(clientSource.includes("DialogueSubtitleState.start(payload)")
   && clientSource.includes("DialogueSubtitleState.tick(client)"),
 "The timed subtitle client is not registered");
 check(subtitleSource.includes("VillagerNewsClientSettings.showSubtitles()")
-  && subtitleSource.includes("HudElementRegistry.attachElementAfter")
+  && subtitleSource.includes("HudRenderCallback.EVENT.register")
+  && subtitleSource.includes("minecraft.options.hideGui")
   && subtitleSource.includes("MAX_LINES = 4")
   && subtitleSource.includes("subtitleScale")
 	&& subtitleSource.includes("RANGE_SQUARED")
@@ -129,13 +160,18 @@ check(animationStateSource.includes("RUN_ENTER_SPEED = 0.6F")
   && animationStateSource.includes("RUN_EXIT_SPEED = 0.3F")
   && animationStateSource.includes("locomotionState.update(age, speed, groundedMovement)"),
 "The original Bedrock run transition thresholds are not applied");
-check(JSON.stringify(handbookHeldModel.display.thirdperson_righthand.rotation) === "[-75,0,0]"
-  && JSON.stringify(handbookHeldModel.display.thirdperson_lefthand.rotation) === "[-75,0,0]"
-  && JSON.stringify(handbookHeldModel.display.firstperson_righthand.rotation) === "[90,0,180]"
-  && JSON.stringify(handbookHeldModel.display.firstperson_lefthand.rotation) === "[90,0,180]"
+check(JSON.stringify(handbookHeldModel.display.thirdperson_righthand.rotation) === "[15,0,0]"
+  && JSON.stringify(handbookHeldModel.display.thirdperson_lefthand.rotation) === "[15,0,0]"
+  && JSON.stringify(handbookHeldModel.display.firstperson_righthand.rotation) === "[0,0,180]"
+  && JSON.stringify(handbookHeldModel.display.firstperson_lefthand.rotation) === "[0,0,180]"
   && JSON.stringify(microphoneHeldModel.display.thirdperson_righthand.rotation) === "[0,-90,-125]"
   && JSON.stringify(microphoneHeldModel.display.thirdperson_lefthand.rotation) === "[0,90,125]",
 "The original Bedrock held-item orientations are not applied");
+for (const model of [handbookHeldModel, microphoneHeldModel]) {
+  check((model.elements ?? []).every((element) => !element.rotation
+    || (["x", "y", "z"].includes(element.rotation.axis) && [0, 22.5, 45].includes(Math.abs(element.rotation.angle)))),
+  "A held item model uses an element rotation that Minecraft 1.21.1 cannot load");
+}
 check(!animationStateSource.includes("poseWeightAt(active.elapsedSeconds())"),
 "Dialogue gestures still suppress the locomotion leg tracks");
 check(animations.idles?.length === 6 && animations.idles.every((idle) => idle.duration > 0
@@ -232,10 +268,13 @@ check(dialogueTestSource.includes('group.id().equals("qffeco")')
 	&& dialogueTestSource.includes('createEntity(level, "iron_golem")')
 	&& !dialogueTestSource.includes('Map.entry("Iron Golem Targets the Player", "iron_golem")'),
 "The iron-golem attack test confuses the attacker with the spoken-to player");
-check((behaviorSource.match(/entity\.entityTags\(\)\.contains\(DIALOGUE_TEST_TAG\)/g) ?? []).length >= 4
-  && behaviorSource.includes("!entity.entityTags().contains(DIALOGUE_TEST_TAG)"),
+check((behaviorSource.match(/entity\.getTags\(\)\.contains\(DIALOGUE_TEST_TAG\)/g) ?? []).length >= 4
+  && behaviorSource.includes("!entity.getTags().contains(DIALOGUE_TEST_TAG)"),
 "Dialogue test actors can be interrupted or enter normal dialogue selection");
-check(behaviorSource.includes("EntitySpawnReason.SPAWN_ITEM_USE"), "Spawn-egg dialogue does not use the server spawn reason");
+check(behaviorSource.includes("MobSpawnType.SPAWN_EGG")
+  && behaviorSource.includes("vnap$consumeSpawnType()")
+  && villagerDataMixinSource.includes("method = \"finalizeSpawn\"")
+  && villagerDataMixinSource.includes("STRUCTURE_SPAWN_TAG"), "Spawn-egg dialogue does not use the server spawn reason");
 check(behaviorSource.includes("maintainSpeechTargets"), "Server-side subject facing is missing");
 check(behaviorSource.includes("NEARBY_SUBJECT_RANGE = 8.0")
 	&& behaviorSource.includes("speaker.distanceToSqr(entity) <= NEARBY_SUBJECT_RANGE * NEARBY_SUBJECT_RANGE")
@@ -369,7 +408,7 @@ check(behaviorSource.includes("tryCreateNaturalSpecial"), "Natural special-chara
 check(!behaviorSource.includes("InteractionResult.FAIL"), "Dialogue hooks still reject vanilla trading interactions");
 check(existsSync(join(root, "src/main/java/com/vnap/mixin/AbstractVillagerMixin.java")), "Trade completion mixin is missing");
 check(existsSync(join(root, "src/main/java/com/vnap/mixin/VillagerDataMixin.java")), "Villager cosmetic state mixin is missing");
-check(itemSource.includes("FabricCreativeModeTab.builder()"), "Villager News creative tab is missing");
+check(itemSource.includes("FabricItemGroup.builder()"), "Villager News creative tab is missing");
 check(language["itemGroup.villager-news-addon-port.items"] === "Villager News", "Villager News creative tab name is missing");
 check(handbook.categories.length === 12, `Expected 12 handbook trigger categories, found ${handbook.categories.length}`);
 check(handbook.categories.flatMap((category) => category.sections).length === 62, "The handbook section hierarchy is incomplete");
@@ -380,10 +419,11 @@ check(handbook.overview.length === 12 && handbook.specialVillagers.length === 6
 check(handbook.categories.flatMap((category) => category.sections)
   .find((section) => section.title === "Real-World Days")?.entries.length === 3,
 "The handbook is missing the original real-world day guide");
-check(handbookSource.includes("Search Triggers") && handbookSource.includes("DialogueCatalog") === false,
+check(handbookSource.includes('t("search")') && language["gui.villager-news-addon-port.search"] === "Search Triggers"
+  && handbookSource.includes("DialogueCatalog") === false,
   "The handbook's searchable trigger browser is missing or using a reduced catalog");
 check(clientSource.includes("new HandbookScreen()"), "Using the handbook does not open its client screen");
-check(clientSource.includes("if (!level.isClientSide()) return InteractionResult.PASS;"), "The handbook opener can run on the integrated server thread");
+check(clientSource.includes("if (!level.isClientSide()) return InteractionResultHolder.pass(player.getItemInHand(hand));"), "The handbook opener can run on the integrated server thread");
 check(handbookSource.includes("VillagerNewsSettingsState.setChattiness")
   && handbookSource.includes("VillagerNewsSettingsState.setRareVoicelines")
   && handbookSource.includes("VillagerNewsSettingsState.setSpawnSpecialVillagers")
@@ -393,13 +433,14 @@ check(settingsSource.includes("scaleCooldown") && settingsSource.includes("rareV
 check(behaviorSource.includes("VillagerNewsSettings.scaleCooldown")
   && behaviorSource.includes("VillagerNewsSettings.rareVoicelines")
   && behaviorSource.includes("VillagerNewsSettings.spawnSpecialVillagers"), "The server behavior does not apply every supported setting");
-check(settingsNetworkSource.includes("Permissions.COMMANDS_GAMEMASTER")
+check(settingsNetworkSource.includes("player.hasPermissions(2)")
   && settingsNetworkSource.includes("if (!canEdit(context.player()))")
   && settingsPayloadSource.includes("boolean canEdit")
   && settingsStateSource.includes("if (!canEdit) return")
-  && handbookSource.includes("require operator permission"), "Handbook server settings are not permission protected");
-check(buildSource.includes('compileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"')
-  && /^modmenu_version=20\.0\.2$/m.test(gradleProperties)
+  && handbookSource.includes('t("settings_operator")')
+  && language["gui.villager-news-addon-port.settings_operator"]?.includes("require operator permission"), "Handbook server settings are not permission protected");
+check(buildSource.includes('modCompileOnly "com.terraformersmc:modmenu:${project.modmenu_version}"')
+  && /^modmenu_version=11\.0\.5$/m.test(gradleProperties)
   && fabricMod.entrypoints?.modmenu?.includes("com.vnap.client.VillagerNewsModMenu")
   && !fabricMod.depends?.modmenu
   && modMenuSource.includes("implements ModMenuApi")
@@ -428,13 +469,12 @@ check(behaviorSource.includes("playHomeChestReaction")
   && behaviorSource.includes('playId(villager, "qfhrlh"'), "Villager home chest reactions are incomplete");
 check(behaviorSource.includes("source.getDirectEntity() == player")
   && behaviorSource.includes("weaponAttackDialogue(player.getMainHandItem())"), "Player attacks can trigger competing dialogue paths");
-check(villagerRendererSource.includes("StableVillagerData")
-  && villagerRendererSource.includes("tick - pendingSince >= 2")
-  && villagerRendererSource.includes("state.villagerData = stableData.resolve"), "Transient profession texture states are not filtered");
+check(professionLayerSource.includes("StableVillagerData.resolve(villager)")
+  && stableVillagerDataSource.includes("tick - pendingSince >= 2"), "Transient profession texture states are not filtered");
 check(!villagerModelSource.includes("villager_news_sign_board_")
-  && clientSource.includes("LivingEntityRenderLayerRegistrationCallback.EVENT.register")
-  && signLayerSource.includes('"textures/block/" + wood + "_sign.png"')
-  && !signLayerSource.includes("textures/entity/signs/")
+  && clientSource.includes("LivingEntityFeatureRendererRegistrationCallback.EVENT.register")
+  && signLayerSource.includes('"textures/entity/signs/" + wood + ".png"')
+  && !signLayerSource.includes("textures/block/")
   && signLayerSource.includes("getPositionerForAttachment(EMFAttachment.Type.VILLAGER)")
   && signLayerSource.includes("5.75F / 16.0F")
   && villagerModelSource.includes('"villager_item"')
@@ -447,8 +487,8 @@ check(/"villager_item":\s*\[\s*0,\s*0,\s*0\s*\]/.test(villagerModelSource)
 check(mixinConfiguration.includes("VillagerSoundMixin")
   && existsSync(join(root, "src/main/java/com/vnap/mixin/VillagerSoundMixin.java")),
 "Vanilla villager death sounds are not deterministically suppressed");
-check(professionLayerSource.includes("vnap$alignAdultClothingWithEmfModel")
-  && professionLayerSource.includes("return layer.getParentModel()"),
+check(!professionLayerSource.includes("noHatModel")
+  && professionLayerSource.includes("vnap$skipBabyClothing"),
 "Villager profession clothing is not aligned with the EMF model");
 const professionTextures = {
   none: "din",
@@ -473,26 +513,29 @@ for (const [profession, texture] of Object.entries(professionTextures)) {
   check(existsSync(join(resources, "assets", "minecraft", "textures", "entity", "villager", "profession", `${profession}.png`)),
     `${profession} profession texture was not generated`);
 }
-check(/^version=1\.3\.6$/m.test(gradleProperties), "The project version is not 1.3.6");
+check(/^version=1\.3\.6\+1\.21\.1$/m.test(gradleProperties), "The project version is not 1.3.6+1.21.1");
+check(/^minecraft_version=1\.21\.1$/m.test(gradleProperties)
+  && /^loader_version=0\.19\.5$/m.test(gradleProperties)
+  && fabricMod.depends?.minecraft === "${minecraft_version}"
+  && fabricMod.depends?.fabricloader === ">=0.19.5", "The project does not target Minecraft 1.21.1 with Fabric Loader 0.19.5");
 check(language["guide.villager-news-addon-port.header"] === "Villager News 1.3.6", "The handbook version is not 1.3.6");
 const merchantCheck = behaviorSource.indexOf("player.containerMenu instanceof MerchantMenu");
 const openingDialogue = behaviorSource.indexOf("trade_open:");
 check(merchantCheck >= 0 && openingDialogue > merchantCheck, "Trade opening dialogue still runs before the merchant menu opens");
 
 for (const item of ["handbook", "mayor_hat", "microphone", "moustache", "testificate_man_helmet", "villager_nose"]) {
-  check(existsSync(join(modAssets, "items", `${item}.json`)), `Missing client item definition for ${item}`);
   check(existsSync(join(modAssets, "models", "item", `${item}.json`)), `Missing item model for ${item}`);
   check(existsSync(join(modAssets, "textures", "item", `${item}.png`)), `Missing item texture for ${item}`);
 }
 for (const item of ["mayor_villager_spawn_egg", "testificate_man_spawn_egg", "villager_5_spawn_egg",
   "villager_9_spawn_egg", "untouchable_villager_spawn_egg", "wooly_spawn_egg"]) {
   check(itemSource.includes(item.toUpperCase()), `Missing registered spawn egg ${item}`);
-  check(existsSync(join(modAssets, "items", `${item}.json`)), `Missing client item definition for ${item}`);
   check(existsSync(join(modAssets, "models", "item", `${item}.json`)), `Missing item model for ${item}`);
   check(existsSync(join(modAssets, "textures", "item", `${item}.png`)), `Missing original texture for ${item}`);
   check(typeof language[`item.villager-news-addon-port.${item}`] === "string", `Missing item name for ${item}`);
 }
-check(itemSource.includes("ComponentSerialization.CODEC.encodeStart(NbtOps.INSTANCE")
+check(itemSource.includes('name.addProperty("text", entityName)')
+  && itemSource.includes('tag.putString("CustomName", name.toString())')
   && !itemSource.includes('{\\"text\\":\\"')
   && !itemSource.includes('putByte("Color"'), "Spawn eggs still write malformed names or dye Wooly red");
 check(behaviorSource.includes("normalizeSpecialEntity(entity)")
@@ -521,15 +564,13 @@ const heldContexts = new Set([
   "firstperson_lefthand",
 ]);
 for (const [item, expected] of Object.entries(heldGeometry)) {
-  const definition = JSON.parse(readFileSync(join(modAssets, "items", item + ".json"), "utf8"));
   const held = JSON.parse(readFileSync(join(modAssets, "models", "item", item + "_held.json"), "utf8"));
   const textureFile = join(modAssets, "textures", "item", "held", item + ".png");
-  const contexts = new Set(definition.model?.cases?.map((entry) => entry.when));
-  check(definition.model?.type === "minecraft:select"
-    && definition.model?.property === "minecraft:display_context"
-    && [...heldContexts].every((context) => contexts.has(context)),
+  check(itemDisplayModelsSource.includes('VillagerNewsAddonPort.id("item/' + item + '_held")')
+    && itemDisplayModelsSource.includes("THIRD_PERSON_RIGHT_HAND, THIRD_PERSON_LEFT_HAND, FIRST_PERSON_RIGHT_HAND, FIRST_PERSON_LEFT_HAND")
+    && heldContexts.size === 4,
   item + " does not use its original 3D model in every hand context");
-  check(definition.model?.fallback?.model === "villager-news-addon-port:item/" + item,
+  check(existsSync(join(modAssets, "models", "item", item + ".json")),
     item + " does not preserve its inventory model");
   check(held.elements?.length === expected.elementCount
     && held.elements.every((element) => element.from?.length === 3 && element.to?.length === 3
@@ -550,15 +591,12 @@ const wearableGeometry = {
   villager_nose: { elementCount: 1, from: [6.4, 0, -1.6], to: [9.6, 6.4, 1.6], textureSize: [64, 64] },
 };
 for (const [item, expected] of Object.entries(wearableGeometry)) {
-  const definition = JSON.parse(readFileSync(join(modAssets, "items", `${item}.json`), "utf8"));
   const worn = JSON.parse(readFileSync(join(modAssets, "models", "item", `${item}_worn.json`), "utf8"));
   const textureFile = join(modAssets, "textures", "item", "worn", `${item}.png`);
-  const headCase = definition.model?.cases?.find((entry) => entry.when === "head");
-  check(definition.model?.type === "minecraft:select"
-    && definition.model?.property === "minecraft:display_context"
-    && headCase?.model?.model === `villager-news-addon-port:item/${item}_worn`,
+  check(itemDisplayModelsSource.includes(`VillagerNewsAddonPort.id("item/${item}_worn")`)
+    && itemDisplayModelsSource.includes("case HEAD -> WORN.get(stack.getItem())"),
   `${item} does not use its worn model on a player head`);
-  check(definition.model?.fallback?.model === `villager-news-addon-port:item/${item}`,
+  check(existsSync(join(modAssets, "models", "item", `${item}.json`)),
     `${item} does not preserve its inventory model`);
   check(worn.elements?.length === expected.elementCount, `${item} has incomplete wearable geometry`);
   check(worn.elements.every((element) => element.from?.length === 3 && element.to?.length === 3
@@ -585,7 +623,7 @@ check(existsSync(join(resources, "data", "villager-news-addon-port", "recipe", "
 
 for (const { file, localScale, armsRest } of [
   { file: "villager.jem", localScale: 1, armsRest: "-0.74997+vnap_arms_rx" },
-  { file: "villager_baby.jem", localScale: 3, armsRest: "-1.0472+vnap_arms_rx" },
+  { file: "villager7.jem", localScale: 3, armsRest: "-1.0472+vnap_arms_rx" },
   { file: "villager2.jem", localScale: 3, armsRest: "-1.0472+vnap_arms_rx" },
   { file: "villager3.jem", localScale: 1, armsRest: "-0.74997+vnap_arms_rx" },
   { file: "villager4.jem", localScale: 1, armsRest: "-0.74997+vnap_arms_rx" },
@@ -638,7 +676,7 @@ for (const { file, localScale, armsRest } of [
   if (file !== "wandering_trader.jem") {
     check(animationText.includes("vnap_has_nose"), `${file} does not respond to synchronized nose state`);
   }
-  if (file === "villager.jem" || file === "villager_baby.jem") {
+  if (file === "villager.jem" || file === "villager7.jem") {
     for (const cosmetic of ["mayor_hat", "helmet", "microphone", "moustache"]) {
       check(JSON.stringify(model).includes(`vnap_cosmetic_${cosmetic}`), `${file} is missing the ${cosmetic} cosmetic`);
     }
@@ -680,7 +718,7 @@ for (const { file, localScale, armsRest } of [
 	      && JSON.stringify(mayorHat?.boxes?.map((box) => box.coordinates[1])) === "[4.53002,3.28602]",
 	    "The wearable Mayor hat cubes are not lowered onto the head");
 	    check(JSON.stringify(mayorMonocle?.translate) === "[-3.27,4.805,-3.526]", "The wearable Mayor monocle is floating in front of the face");
-  } else if (file === "villager_baby.jem") {
+  } else if (file === "villager7.jem") {
     check(head?.boxes?.some((box) => box.coordinates?.slice(3).includes(24)), "Baby villager is not using the add-on's large-head rig");
     check(animationText.includes("0.33333*vnap_root_sx") && animationText.includes("0.33333*vnap_root_sy")
       && animationText.includes("0.33333*vnap_root_sz"), "Baby villager does not apply its authored one-third rig scale");
@@ -697,6 +735,10 @@ for (const { file, localScale, armsRest } of [
 
 check(existsSync(join(resources, "assets", "minecraft", "textures", "entity", "villager", "villager_baby.png")),
   "Baby villager base texture is missing");
+const villagerProperties = readFileSync(join(cem, "villager.properties"), "utf8");
+check(/^models\.1=7$/m.test(villagerProperties) && /^baby\.1=true$/m.test(villagerProperties)
+  && JSON.parse(readFileSync(join(cem, "villager7.jem"), "utf8")).texture === "minecraft:textures/entity/villager/villager_baby.png"
+  && !existsSync(join(cem, "villager_baby.jem")), "Baby villagers do not select the dedicated baby model");
 check(readFileSync(join(resources, "assets", "minecraft", "textures", "entity", "villager", "villager_baby.png"))
   .equals(readFileSync(join(modAssets, "textures", "entity", "dkn.png"))),
 "Baby villager is not using the original add-on's dedicated baby face texture");
@@ -725,7 +767,12 @@ for (const event of ["ambient", "hurt", "death"]) {
   const all = flatten(model.models);
   const woolyBone = (bone) => all.find((entry) => entry.id === `wooly_base_${bone}`);
   const rootModel = model.models.find((entry) => entry.id === "wooly_base_root");
-  check(rootModel?.part === "root" && rootModel.attach === true, "Wooly does not attach its Bedrock root rig");
+  // 1.21.1 sheep only render head body and legs so the rig replaces the body
+  check(rootModel?.part === "body" && rootModel.attach === false
+    && !model.models.some((entry) => entry.id === "wooly_hide_body")
+    && JSON.stringify(rootModel.animations?.[0]) === JSON.stringify({
+      "this.rx": "-1.5708", "this.ry": "0", "this.rz": "0", "this.ty": "-2", "this.tz": "-19",
+    }), "Wooly does not attach its Bedrock root rig");
   check(JSON.stringify(rootModel.translate) === "[0,-24,0]", "Wooly has the wrong Bedrock-to-Java root offset");
   for (const bone of [
     "root", "body", "46fljga5", "oggd_46fljga5", "k966h_head", "oggd_head", "3dafc", "7246gn6jd2q",
@@ -801,7 +848,8 @@ for (const event of ["ambient", "hurt", "death"]) {
   check(sheepProperties.includes("models.1=3") && sheepProperties.includes("nbt.1.Sheared=1")
     && sheepProperties.includes("models.2=2"), "Wooly's sheared model selector is missing");
 
-  for (const layer of ["sheep_wool_undercoat", "sheep_wool"]) {
+  check(!existsSync(join(cem, "sheep_wool_undercoat2.jem")), "Wooly still ships a model for a layer 1.21.1 does not have");
+  for (const layer of ["sheep_wool"]) {
     const woolLayer = JSON.parse(readFileSync(join(cem, `${layer}2.jem`), "utf8"));
     check(woolLayer.models.length === 6 && woolLayer.models.every((entry) => entry.attach === false && !entry.boxes?.length), `Wooly's ${layer} layer is not suppressed`);
     const woolProperties = readFileSync(join(cem, `${layer}.properties`), "utf8");
